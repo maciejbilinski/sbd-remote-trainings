@@ -1,68 +1,46 @@
 import express, { Express, Request, Response } from 'express';
-import dotenv from 'dotenv';
-import { initOracleClient, createPool } from 'oracledb';
 import * as Eta from "eta"
+import { getPool } from './db';
+import { init } from './init';
 
-dotenv.config();
+const bootstrap = async () => {
+  init();
 
-const app: Express = express();
-app.use('/styles', express.static('./styles'));
-app.engine("eta", Eta.renderFile);
-const port = process.env.PORT;
-app.set("view engine", "eta");
-app.set("views", "./views");
+  // express settings
+  const app: Express = express();
+  app.use('/styles', express.static('./styles'));
 
-initOracleClient({ libDir: process.env.ORACLE_CLIENT_PATH });
+  // eta settings
+  app.engine("eta", Eta.renderFile);
+  app.set("view engine", "eta");
+  app.set("views", "./views");
 
-async function run() {
-  let pool, result;
-
-  try {
-
-    pool = await createPool({
-      user: process.env.DB_USER,
-      password: process.env.DB_USER,
-      connectString: "admlab2.cs.put.poznan.pl:1521/dblab02_students.cs.put.poznan.pl",
-    });
-
-    let connection;
-    try {
+  // routes
+  app.get('/', async (_: Request, res: Response) => {
+    let pool, connection, result;
+    try{
+      pool = await getPool();
       connection = await pool.getConnection();
-      result = await connection.execute(`SELECT table_name FROM user_tables`);
-    } catch (err) {
-      throw err;
-    } finally {
-      if (connection) {
-        try {
-          await connection.close();
-        } catch (err) {
-          throw err;
-        }
-      }
+      result = (await connection.execute(`SELECT table_name FROM user_tables`)).rows;
+    }catch(err){
+      console.error(err);
+    }finally{
+      await connection?.close();
+      await pool?.close();
     }
-  } catch (err: any) {
-    console.error(err.message);
-    throw err;
-  } finally {
-    await pool?.close();
-  }
-  return result?.rows;
+
+    if(result){
+      res.render("test", {
+        tables: result
+      });
+    }else{
+      res.status(500);
+    }
+  });
+
+  // listen
+  const port = process.env.PORT;
+  app.listen(port, () => console.log(`Server is running at http://localhost:${port}`));
 }
 
-
-run().then((result) => {
-  console.log("Data Source has been initialized!");
-
-  app.get('/', (_: Request, res: Response) => {
-    res.render("test", {
-      tables: result
-    });
-  });
-
-  app.listen(port, () => {
-    console.log(`⚡️[server]: Server is running at http://localhost:${port}`);
-  });
-
-}).catch((err) => {
-  console.error("Error during Data Source initialization", err);
-});
+bootstrap();
