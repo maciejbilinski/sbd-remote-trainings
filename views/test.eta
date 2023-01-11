@@ -1,7 +1,0 @@
-<% layout('./layout') %>
-
-<ul>
-    <% it.tables.forEach((table) => { %>
-    <li><%= table %></li>
-    <% }) %>
-</ul>

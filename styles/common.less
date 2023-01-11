@@ -1,12 +1,26 @@
-html, body{
-    padding: 0;
-    margin: 0;
-
-    // just for test
-    background-color: darken(aquamarine, 35%);
-    min-width: 100vw;
-    min-height: 100vh;
-    display: flex;
-    justify-content: center;
-    align-items: center;
+@primary: #7b1fa2;
+@primary-dark: #4a0072;
+@primary-light: #ae52d4;
+@red: #f44336;
+body{
+    background-image: url('../img/bg.png');
+    background-repeat: repeat;
+}
+*{
+    font-family: 'Lato', sans-serif;
+    font-weight: 300;
+}
+.regular{
+    font-weight: 400;
+}
+.btn-primary{
+    background-color: @primary;
+    border-color: @primary;
+    &:focus, &:active, &:hover{
+        border-color: @primary-dark !important;
+        background-color: @primary-dark !important;
+    }
+}
+.red, .error{
+    color: @red;
 }

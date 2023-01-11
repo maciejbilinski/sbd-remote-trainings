@@ -1,0 +1,16 @@
+<% layout('./layout', {styles: ['welcome']}) %>
+<section class="content" data-bs-theme="light">
+    <h1>Witaj <span class='regular'>Nieznajomy</span>!</h1>
+    <h2>Przedstaw się, aby uzyskać dostęp do serwisu</h2>
+    <form action="/" method="POST">
+        <% if(it.username){ %>
+        <input tabindex="0" type="text" name="username" id="username" required minlength="1" maxlength="255" value="<%= it.username %>">
+        <% } else {%>
+        <input tabindex="0" type="text" name="username" id="username" required>
+        <% } %>
+        <% if(it.error){ %>
+        <p class="error"><%= it.error %></p>
+        <% } %>
+        <input tabindex="0" type="submit" class="btn btn-primary" value="Start">
+    </form>
+</section>

@@ -1,0 +1,42 @@
+main{
+    min-width: 100vw;
+    min-height: 100vh;
+
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+.content{
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    background-color: #424242;
+    padding: 20px;
+    border-radius: 10px;
+}
+h1, h2{
+    font-weight: 300;
+}
+h2{
+    font-size: 1em;
+}
+form{
+    width: 100%;
+    text-align: center;
+}
+#username{
+    margin: 10px;
+    background: transparent;
+    border: none;
+    border-bottom: 1px solid #000000;
+    outline: none;
+    color: #FFF;
+    width: 100%;
+    text-align: center;
+    transition: border-color .5s;
+    text-transform: uppercase;
+    &:focus{
+        border-color: lighten(#000, 50%);
+    }
+}
