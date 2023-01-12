@@ -1,0 +1,96 @@
+<% layout('./layout', {styles: ['welcome', 'cockpit']}) %>
+<section class="content" data-bs-theme="dark">
+    <h1>Witaj <span class='regular'><%~ it.username %></span>!</h1>
+    <div class="options">
+        <a href="account-settings">
+            <div class="flex-option">
+                <span class="material-symbols-outlined">settings_suggest</span><span>Personalizacja konta</span>
+            </div>
+        </a>
+        <a href="logout">
+            <div class="flex-option">
+                <span class="material-symbols-outlined">logout</span><span>Wyloguj</span>
+            </div>
+        </a>
+    </div>
+    <div class="container">
+        <div class="row">
+            <div class="col-3"></div>
+            <div class="col-6">
+                <a href="training-plans">
+                    <div class="card">
+                        <div class="card-body">
+                            <h5 class="card-title">Plany treningowe</h5>
+                            <span class="material-symbols-outlined">date_range</span>
+                        </div>
+                    </div>
+                </a>
+            </div>
+            <div class="col-3"></div>
+        </div>
+        <div class="row">
+            <div class="col-4">
+                <a href="training-creator">
+                    <div class="card">
+                        <div class="card-body">
+                            <h5 class="card-title">Kreator treningów</h5>
+                            <span class="material-symbols-outlined">add_notes</span>
+                        </div>
+                    </div>
+                </a>
+            </div>
+            <div class="col-4">
+                <a href="exercise-creator">
+                    <div class="card">
+                        <div class="card-body">
+                            <h5 class="card-title">Kreator ćwiczeń</h5>
+                            <span class="material-symbols-outlined">sports_gymnastics</span>
+                        </div>
+                    </div>
+                </a>
+            </div>
+            <div class="col-4">
+                <a href="equipment-creator">
+                    <div class="card">
+                        <div class="card-body">
+                            <h5 class="card-title">Kreator sprzętu</h5>
+                            <span class="material-symbols-outlined">fitness_center</span>
+                        </div>
+                    </div>
+                </a>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-4">
+                <a href="training-search">
+                    <div class="card">
+                        <div class="card-body">
+                            <h5 class="card-title">Wyszukiwarka treningów</h5>
+                            <span class="material-symbols-outlined">search</span>
+                        </div>
+                    </div>
+                </a>
+            </div>
+            <div class="col-4">
+                <a href="exercise-search">
+                    <div class="card">
+                        <div class="card-body">
+                            <h5 class="card-title">Wyszukiwarka ćwiczeń</h5>
+                            <span class="material-symbols-outlined">search</span>
+                        </div>
+                    </div>
+                </a>
+            </div>
+            <div class="col-4">
+                <a href="equipment-search">
+                    <div class="card">
+                        <div class="card-body">
+                            <h5 class="card-title">Wyszukiwarka sprzętu</h5>
+                            <span class="material-symbols-outlined">search</span>
+                        </div>
+                    </div>
+                </a>
+            </div>
+        </div>    
+    </div>
+</section>

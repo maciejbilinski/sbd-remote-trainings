@@ -25,12 +25,64 @@ const bootstrap = async () => {
   app.set("view engine", "eta");
   app.set("views", "./views");
 
+  // Checks if user is logged in; if not, redirects to main page
+  const checkLoggedIn = (req: Request, res: Response, next: Function) => {
+    if(!req.session.username) {
+      res.redirect('/');
+    } else {
+      next();
+    }
+  }
+
   // routes
   app.get('/', (req: Request, res: Response) => {
     if(!req.session.username)
       res.render("welcome", {});
     else
-      res.send(`signed as ${req.session.username}!`);
+      res.render("cockpit", {username: req.session.username});
+  });
+
+  app.get('/training-creator', checkLoggedIn, (req: Request, res: Response) => {
+    res.send('Kreator treningów');
+  });
+
+  app.get('/exercise-creator', checkLoggedIn, (req: Request, res: Response) => {
+    res.send('Kreator ćwiczeń');
+  });
+
+  app.get('/equipment-creator', checkLoggedIn, (req: Request, res: Response) => {
+    res.send('Kreator sprzętu');
+  });
+
+  app.get('/training-search', checkLoggedIn, (req: Request, res: Response) => {
+    res.send('Wyszukiwarka treningów');
+  });
+
+  app.get('/exercise-search', checkLoggedIn, (req: Request, res: Response) => {
+    res.send('Wyszukiwarka ćwiczeń');
+  });
+
+  app.get('/training-plans', checkLoggedIn, (req: Request, res: Response) => {
+    res.send('Plany treningowe użytkownika');
+  });
+
+  app.get('/equipment-search', checkLoggedIn, (req: Request, res: Response) => {
+    res.send('Wyszukiwarka sprzętu');
+  });
+
+  app.get('/account-settings', checkLoggedIn, (req: Request, res: Response) => {
+    res.send('Personalizacja konta');
+  });
+
+  // Handle logout
+  app.get('/logout', checkLoggedIn, (req: Request, res: Response) => {
+    req.session.destroy(err => {
+      if (err) {
+        res.send('Błąd podczas wylogowywania!');
+      } else {
+        res.redirect('/');
+      }
+    });
   });
 
   // forms
