@@ -4,7 +4,7 @@ import { getPool } from './db';
 import { init } from './init';
 import { copyFile } from 'fs';
 import session from 'express-session';
-import { OUT_FORMAT_OBJECT } from 'oracledb';
+import { OUT_FORMAT_ARRAY, OUT_FORMAT_OBJECT } from 'oracledb';
 import fileUpload, { UploadedFile } from 'express-fileupload';
 import path from 'path';
 
@@ -74,8 +74,26 @@ const bootstrap = async () => {
     res.send('Kreator treningów');
   });
 
-  app.get('/exercise-creator', checkLoggedIn, (req: Request, res: Response) => {
-    res.send('Kreator ćwiczeń');
+  app.get('/exercise-creator', checkLoggedIn, async (req: Request, res: Response) => {
+    let pool, connection, result;
+    try{
+      pool = await getPool();
+      connection = await pool.getConnection();
+      result = (await connection.execute(`SELECT nazwa FROM sprzet`, [], { outFormat: OUT_FORMAT_ARRAY } )).rows;
+      if(result){
+          res.render("exercises_creator", {
+            equipment: [].concat.apply([], (result as never[]))
+          });
+        }else res.status(500)
+    }catch(err){
+      console.error(err);
+      res.status(500);          
+    }finally{
+      await connection?.close();
+      await pool?.close();
+    }
+
+    
   });
 
   app.get('/equipment-creator', checkLoggedIn, (req: Request, res: Response) => {
@@ -212,6 +230,71 @@ const bootstrap = async () => {
       }
     }else{
       res.render("equipment_creator", {
+        error: "Nie wypełniono obowiązkowych pól!"
+      });
+    }
+  });
+  app.post('/exercise-creator', checkLoggedIn, fileUpload(), async (req: Request, res: Response) => {
+    var equipment: string[] = [];
+    Object.keys(req.body).forEach((key) => {
+      if(key.startsWith("equipment-")){
+        equipment.push(decodeURI(key.substring(10)))
+      }
+    })
+    console.log(equipment);
+    if(req.body.name && req.body.type){
+      if(['y', 'n'].includes(req.body.type)){
+        let pool, connection, result;
+        try{
+          pool = await getPool();
+          connection = await pool.getConnection();
+          result = (await connection.execute(`SELECT COUNT(*) AS n FROM cwiczenia WHERE nazwa=:nazwa`, [req.body.name], { outFormat: OUT_FORMAT_OBJECT } )).rows;
+          if(result){
+            if(result[0]){
+              if((result[0] as {N: number}).N === 0){
+                var error = false;
+                if(req.files?.video){
+                  const video = (req.files.video as UploadedFile);
+                  const ext = getExtension(video.name);
+                  if(!['mp4'].includes(ext)){
+                    res.render("exercises_creator", {
+                      error: "Niepoprawny format instruktażu! Dozwolone to: 'mp4'."
+                    });
+                    error = true;
+                  }else{
+                    video.mv(path.join(__dirname, '..', 'files', 'exercises', req.body.name+"."+ext))
+                  }
+                }
+
+                if(!error){
+                  await connection.execute(`INSERT INTO cwiczenia (nazwa, ma_instruktaz, czy_powtorzeniowe) VALUES (:nazwa, :ma_instruktaz, :czy_powtorzeniowe)`, [
+                    req.body.name,
+                    boolToDB(req.files?.video !== undefined),
+                    boolToDB(req.body.type === 'y')
+                  ], {autoCommit: true});
+                  res.redirect('/created/ćwiczenie');
+                }
+              }else{
+                res.render("exercises_creator", {
+                  error: "Ta nazwa jest już zajęta!"
+                });
+              }
+            }else res.status(500)
+          }else res.status(500)
+        }catch(err){
+          console.error(err);
+          res.status(500);          
+        }finally{
+          await connection?.close();
+          await pool?.close();
+        }
+      }else{
+        res.render("exercises_creator", {
+          error: "Niepoprawna wartość pola \"Typ ćwiczenia\"!"
+        });
+      }
+    }else{
+      res.render("exercises_creator", {
         error: "Nie wypełniono obowiązkowych pól!"
       });
     }
