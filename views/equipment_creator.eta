@@ -24,7 +24,7 @@
 <div class="form-group">
     <label for="photo">Zdjęcie:</label>
     <br>
-    <input type="file" class="form-control-file" id="photo" name="photo" accept="image/png, image/jpeg">
+    <input type="file" class="form-control-file" id="photo" name="photo" accept="image/png">
 </div>
 <div class="text-center">
     <% if(it.error){ %>
