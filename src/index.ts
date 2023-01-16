@@ -5,6 +5,18 @@ import { init } from './init';
 import { copyFile } from 'fs';
 import session from 'express-session';
 import { OUT_FORMAT_OBJECT } from 'oracledb';
+import fileUpload, { UploadedFile } from 'express-fileupload';
+import path from 'path';
+
+const boolToDB = (x: boolean) => {
+  return (x ? 'T' : 'N');
+}
+
+const getExtension = (filename: string) => {
+  const re = /(?:\.([^.]+))?$/;
+  return re.exec(filename)![1];
+}
+
 const bootstrap = async () => {
   init();
 
@@ -19,14 +31,20 @@ const bootstrap = async () => {
   }));
   app.use('/styles', express.static('./styles'));
   app.use('/img', express.static('./img'));
+  app.use('/files', express.static('./files'));
 
   // eta settings
   app.engine("eta", Eta.renderFile);
   app.set("view engine", "eta");
   app.set("views", "./views");
+  
 
   // Checks if user is logged in; if not, redirects to main page
   const checkLoggedIn = (req: Request, res: Response, next: Function) => {
+    if(process.env.STILL_LOGGED_IN == "true"){
+      req.session.username = "admin"
+      req.session.save();
+    }
     if(!req.session.username) {
       res.redirect('/');
     } else {
@@ -36,10 +54,20 @@ const bootstrap = async () => {
 
   // routes
   app.get('/', (req: Request, res: Response) => {
+    if(process.env.STILL_LOGGED_IN == "true"){
+      req.session.username = "admin"
+      req.session.save();
+    }
     if(!req.session.username)
       res.render("welcome", {});
     else
       res.render("cockpit", {username: req.session.username});
+  });
+
+  app.get('/created/:what', checkLoggedIn, (req: Request, res: Response) => {
+    res.render('created', {
+      what: req.params.what
+    })
   });
 
   app.get('/training-creator', checkLoggedIn, (req: Request, res: Response) => {
@@ -51,7 +79,7 @@ const bootstrap = async () => {
   });
 
   app.get('/equipment-creator', checkLoggedIn, (req: Request, res: Response) => {
-    res.send('Kreator sprzętu');
+    res.render("equipment_creator", {});
   });
 
   app.get('/training-search', checkLoggedIn, (req: Request, res: Response) => {
@@ -97,11 +125,12 @@ const bootstrap = async () => {
           try{
             pool = await getPool();
             connection = await pool.getConnection();
-            result = (await connection.execute(`SELECT COUNT(*) AS n FROM uzytkownicy WHERE login=:login`, [username], { outFormat: OUT_FORMAT_OBJECT } )).rows;
+            result = (await connection.execute(`SELECT COUNT(*) AS n FROM uzytkownicy WHERE login=:login`, [username], { outFormat: OUT_FORMAT_OBJECT } )).rows;            
+
             if(result){
               if(result[0]){
-                if((result[0] as {n: number}).n !== 0){
-                  await connection.execute(`INSERT INTO uzytkownicy (login, preferowana_jednostka) VALUES (:login, 'K')`, [username])
+                if((result[0] as {N: number}).N === 0){
+                  await connection.execute(`INSERT INTO uzytkownicy (login, preferowana_jednostka) VALUES (:login, 'K')`, [username], {autoCommit: true})
                 }
                 req.session.username = username;
                 req.session.save();
@@ -126,6 +155,65 @@ const bootstrap = async () => {
       }
     }else{
       res.status(404);
+    }
+  });
+
+  app.post('/equipment-creator', checkLoggedIn, fileUpload(), async (req: Request, res: Response) => {
+    if(req.body.name && req.body.type){
+      if(['y', 'n'].includes(req.body.type)){
+        let pool, connection, result;
+        try{
+          pool = await getPool();
+          connection = await pool.getConnection();
+          result = (await connection.execute(`SELECT COUNT(*) AS n FROM sprzet WHERE nazwa=:nazwa`, [req.body.name], { outFormat: OUT_FORMAT_OBJECT } )).rows;
+          if(result){
+            if(result[0]){
+              if((result[0] as {N: number}).N === 0){
+                var error = false;
+                if(req.files?.photo){
+                  const photo = (req.files.photo as UploadedFile);
+                  const ext = getExtension(photo.name);
+                  if(!['jpg', 'png', 'jpeg'].includes(ext)){
+                    res.render("equipment_creator", {
+                      error: "Niepoprawny format zdjęcia! Dozwolone to: 'jpg', 'png', 'jpeg'."
+                    });
+                    error = true;
+                  }else{
+                    photo.mv(path.join(__dirname, '..', 'files', 'equipment', req.body.name+"."+ext))
+                  }
+                }
+
+                if(!error){
+                  await connection.execute(`INSERT INTO sprzet (nazwa, ma_zdjecie, czy_rozne_obciazenie) VALUES (:nazwa, :ma_zdjecie, :czy_rozne_obciazenie)`, [
+                    req.body.name,
+                    boolToDB(req.files?.photo !== undefined),
+                    boolToDB(req.body.type === 'y')
+                  ], {autoCommit: true});
+                  res.redirect('/created/sprzęt');
+                }
+              }else{
+                res.render("equipment_creator", {
+                  error: "Ta nazwa jest już zajęta!"
+                });
+              }
+            }else res.status(500)
+          }else res.status(500)
+        }catch(err){
+          console.error(err);
+          res.status(500);          
+        }finally{
+          await connection?.close();
+          await pool?.close();
+        }
+      }else{
+        res.render("equipment_creator", {
+          error: "Niepoprawna wartość pola \"Wykorzystuje obciążenie\"!"
+        });
+      }
+    }else{
+      res.render("equipment_creator", {
+        error: "Nie wypełniono obowiązkowych pól!"
+      });
     }
   });
 

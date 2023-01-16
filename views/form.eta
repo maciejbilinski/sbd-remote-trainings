@@ -1,0 +1,7 @@
+<% layout('./layout', {styles: ['form']}) %>
+<section class="content" data-bs-theme="light">
+    <form method="POST" enctype="multipart/form-data">
+        <%~ it.body %>
+        
+    </form>
+</section>
