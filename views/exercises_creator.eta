@@ -45,9 +45,3 @@
     </div>
     </div>
 </div>
-<div class="text-center">
-    <% if(it.error){ %>
-        <p class="error"><%= it.error %></p>
-    <% } %>
-    <button type="submit" class="btn btn-primary">Utwórz</button>
-</div>

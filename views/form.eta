@@ -1,7 +1,12 @@
-<% layout('./layout', {styles: ['form']}) %>
+<% layout('./layout', {styles: ['form'], scripts: ['form']}) %>
 <section class="content" data-bs-theme="light">
-    <form method="POST" enctype="multipart/form-data">
+    <form method="POST" enctype="multipart/form-data" ajax-form form-redirect="<%=it.desc%>">
         <%~ it.body %>
-        
+        <div class="text-center">
+            <p class="error" form-error></p>
+            <button type="submit" class="btn btn-primary btn-loader" form-submit>
+                <span class="material-symbols-outlined loader">autorenew</span><span class="text">Utwórz</span><span class="loader-text">Czekaj...</span>
+            </button>
+        </div>
     </form>
 </section>

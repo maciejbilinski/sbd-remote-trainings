@@ -215,7 +215,7 @@ const bootstrap = async () => {
                   const photo = (req.files.photo as UploadedFile);
                   const ext = getExtension(photo.name);
                   if(!['jpg', 'png', 'jpeg'].includes(ext)){
-                    res.render("equipment_creator", {
+                    res.json({
                       error: "Niepoprawny format zdjęcia! Dozwolone to: 'jpg', 'png', 'jpeg'."
                     });
                     error = true;
@@ -230,10 +230,10 @@ const bootstrap = async () => {
                     boolToDB(req.files?.photo !== undefined),
                     boolToDB(req.body.type === 'y')
                   ], {autoCommit: true});
-                  res.redirect('/created/sprzęt');
+                  res.json({success: true});
                 }
               }else{
-                res.render("equipment_creator", {
+                res.json({
                   error: "Ta nazwa jest już zajęta!"
                 });
               }
@@ -247,16 +247,17 @@ const bootstrap = async () => {
           await pool?.close();
         }
       }else{
-        res.render("equipment_creator", {
+        res.json({
           error: "Niepoprawna wartość pola \"Wykorzystuje obciążenie\"!"
         });
       }
     }else{
-      res.render("equipment_creator", {
+      res.json({
         error: "Nie wypełniono obowiązkowych pól!"
       });
     }
   });
+
   app.post('/exercise-creator', checkLoggedIn, fileUpload(), async (req: Request, res: Response) => {
     var equipment: string[] = [];
     Object.keys(req.body).forEach((key) => {
