@@ -1,4 +1,3 @@
-<% layout('./layout', {styles: ['form'], scripts: ['form']}) %>
 <section class="content" data-bs-theme="light">
     <form method="POST" enctype="multipart/form-data" ajax-form form-redirect="<%=it.desc%>">
         <%~ it.body %>
