@@ -310,16 +310,12 @@ const bootstrap = async () => {
                   await connection.execute(`INSERT INTO cwiczenia (nazwa, ma_instruktaz, czy_powtorzeniowe) VALUES (:nazwa, :ma_instruktaz, :czy_powtorzeniowe)`, data, {autoCommit: false});
                   for(const equip of equipment){
                     result = (await connection.execute(`SELECT COUNT(*) AS n FROM sprzet WHERE nazwa=:nazwa`, [equip], { outFormat: OUT_FORMAT_OBJECT } )).rows;
-                    if(result){
-                      if(result[0]){
-                        if((result[0] as {N: number}).N === 0){
-                          error = true;
-                          res.json({
-                            error: 'Próbowano powiązać ćwiczenie z nieistniejącym sprzętem!'
-                          })
-                          break;
-                        }
-                      }
+                    if(!result || !result[0] || (result[0] as {N: number}).N === 0){
+                      error = true;
+                      res.json({
+                        error: 'Próbowano powiązać ćwiczenie z nieistniejącym sprzętem!'
+                      })
+                      break;
                     }
                     await connection.execute(`
                     INSERT INTO cwiczeniasprzet (cwiczenia_nazwa, sprzet_nazwa) VALUES (:1, :2)`, [

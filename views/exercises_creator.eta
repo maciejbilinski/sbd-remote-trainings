@@ -3,3 +3,7 @@
 <%~ includeFile('./exercises_creator_form', {
     equipment: it.equipment
 }) %>
+
+<aside class="subform hidden" id="equip_creator">
+<%~ includeFile('./equipment_creator_form', {close: true}) %>
+</aside>

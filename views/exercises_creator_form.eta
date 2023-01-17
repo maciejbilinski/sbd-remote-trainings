@@ -1,4 +1,4 @@
-<% layout('./form', {desc: 'ćwiczenie'}) %>
+<% layout('./form', {desc: 'ćwiczenie', action: 'exercise-creator'}) %>
 <h1 class="text-center">
     <a href="/" class="back"><span class="material-symbols-outlined">arrow_back</span></a> Kreator ćwiczeń
 </h1>
@@ -24,12 +24,12 @@
 <div class="form-group">
     <label for="video">Instruktaż:</label>
     <br>
-    <input type="file" class="form-control-file" id="video" name="video" accept="image/mp4">
+    <input type="file" class="form-control-file" id="video" name="video" accept="video/mp4">
 </div>
 <div class="form-group">
-    <label for="type">Wymagany sprzęt:</label>
+    <label class="with-icon" for="type"><span class='material-symbols-outlined add-circle' subform-id="equip_creator">add_circle</span> Wymagany sprzęt:</label>
     <div class="container panel-container">
-    <div class="row">
+    <div class="row" id="exercise-equipment">
     <% if(it.equipment) {%>
     <% it.equipment.forEach((e) => { %>
     <div class="col-2 panel">

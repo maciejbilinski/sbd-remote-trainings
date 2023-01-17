@@ -1,7 +1,10 @@
-<% layout('./form', {desc: 'sprzęt'}) %>
+<% layout('./form', {desc: 'sprzęt', action: 'equipment-creator'}) %>
 
 <h1 class="text-center">
-    <a href="/" class="back"><span class="material-symbols-outlined">arrow_back</span></a> Kreator sprzętu
+    <% if(it.close){%>
+    <a href="#" class="close red"><span class="material-symbols-outlined">close</span></a>
+    <% }else{ %>
+    <a href="/" class="back"><span class="material-symbols-outlined">arrow_back</span></a><%}%> Kreator sprzętu
 </h1>
 <div class="form-group">
     <label for="name"><sup class="red">*</sup>Nazwa sprzętu:</label>
