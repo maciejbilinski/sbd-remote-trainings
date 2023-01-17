@@ -88,7 +88,9 @@ const bootstrap = async () => {
         }else res.status(500)
     }catch(err){
       console.error(err);
-      res.status(500);          
+      res.status(500);  
+      res.send('Błąd wewnętrzny')       
+        
     }finally{
       await connection?.close();
       await pool?.close();
@@ -134,6 +136,7 @@ const bootstrap = async () => {
       } catch (err) {
         console.error(err);
         res.status(500);          
+        res.send('Błąd wewnętrzny')       
       } finally {
         await connection?.close();
         await pool?.close();
@@ -180,7 +183,8 @@ const bootstrap = async () => {
             }else res.status(500)
           }catch(err){
             console.error(err);
-            res.status(500);          
+            res.status(500);   
+            res.send('Błąd wewnętrzny')       
           }finally{
             await connection?.close();
             await pool?.close();
