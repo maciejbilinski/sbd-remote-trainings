@@ -1,0 +1,26 @@
+<% layout('./layout', {styles: ['welcome', 'cockpit']}) %>
+<section class="content" data-bs-theme="dark">
+    <div class="sub-options">
+        <a href="/">
+            <div class="flex-option">
+                <span class="material-symbols-outlined">arrow_back</span><span>Powrót do kokpitu</span>
+            </div>
+        </a>
+    </div>
+    <h1>Personalizacja konta</h1>
+    <p>Nazwa użytkownika: <span style="font-weight:bold;"><%~ it.username %></span></p>
+    <div class="form-container">
+    <form action="/account-settings" method="POST">
+        <p>Preferowane jednostki: <%~ it.unit %></p>
+        <div class="form-check">
+            <input type="radio" name="unit" value="K" id="K" class="form-check-input">
+            <label for="K" class="form-check-label">Kilogramy [kg]</label>
+        </div>
+        <div class="form-check">
+            <input type="radio" name="unit" value="L" id="L" class="form-check-input">
+            <label for="L" class="form-check-label">Funty [lbs]</label>
+        </div>
+        <input type="submit" class="btn btn-primary" value="Zapisz">
+    </form>
+    </div>
+</section>

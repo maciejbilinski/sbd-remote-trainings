@@ -116,8 +116,30 @@ const bootstrap = async () => {
     res.send('Wyszukiwarka sprzętu');
   });
 
-  app.get('/account-settings', checkLoggedIn, (req: Request, res: Response) => {
-    res.send('Personalizacja konta');
+  app.get('/account-settings', checkLoggedIn, async (req: Request, res: Response) => {
+    if (!req.session.unit) {
+      const username = req.session.username;
+      let pool, connection, result;
+      try {
+        pool = await getPool();
+        connection = await pool.getConnection();
+        result = (await connection.execute(`SELECT preferowana_jednostka FROM uzytkownicy WHERE login=:login`, [username], { outFormat: OUT_FORMAT_OBJECT })).rows;
+        if (result) {
+          if (result[0]) {
+            req.session.unit = (result[0] as { PREFEROWANA_JEDNOSTKA: string }).PREFEROWANA_JEDNOSTKA;
+            req.session.save();
+          }
+        }
+      } catch (err) {
+        console.error(err);
+        res.status(500);          
+      } finally {
+        await connection?.close();
+        await pool?.close();
+      }
+    } else {
+      res.render('account-settings', { username: req.session.username, unit: req.session.unit });
+    }
   });
 
   // Handle logout

@@ -4,6 +4,7 @@ import { initOracleClient } from 'oracledb';
 declare module 'express-session' {
     interface SessionData {
       username: string;
+      unit: string;
     }
   }
 
