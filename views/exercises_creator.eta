@@ -1,53 +1,9 @@
-<% layout('./form') %>
-<h1 class="text-center">
-    <a href="/" class="back"><span class="material-symbols-outlined">arrow_back</span></a> Kreator ćwiczeń
-</h1>
-<div class="form-group">
-    <label for="name"><sup class="red">*</sup>Nazwa ćwiczenia:</label>
-    <input type="text" class="form-control" name="name" id="name" placeholder="np. Przysiad" required>
-</div>
-<div class="form-group">
-    <label for="type"><sup class="red">*</sup>Typ ćwiczenia:</label>
-    <div class="form-check">
-        <input class="form-check-input" type="radio" name="type" id="type1" value="n" checked>
-        <label class="form-check-label" for="type1">
-            Na czas
-        </label>
-        </div>
-        <div class="form-check">
-        <input class="form-check-input" type="radio" name="type" id="type2" value="y">
-        <label class="form-check-label" for="type2">
-            Na ilość powtórzeń
-        </label>
-    </div>
-</div>
-<div class="form-group">
-    <label for="video">Instruktaż:</label>
-    <br>
-    <input type="file" class="form-control-file" id="video" name="video" accept="image/mp4">
-</div>
-<div class="form-group">
-    <label for="type">Wymagany sprzęt:</label>
-    <div class="container panel-container">
-    <div class="row">
-    <% if(it.equipment) {%>
-    <% it.equipment.forEach((e) => { %>
-    <div class="col-2 panel">
-        <input class="form-check-input d-none" type="checkbox" name="equipment-<%=encodeURI(e)%>" id="<%=encodeURI(e)%>">
-        <label class="form-check-label" for="<%=encodeURI(e)%>">
-            <div class="selected"></div>
-            <img src="/files/equipment/<%= e %>.png" onerror="this.style.display='none';">
-            <p class="equip-name"><%= e %></p>
-        </label>
-    </div>
-    <% }) %>
-    <% } %>
-    </div>
-    </div>
-</div>
-<div class="text-center">
-    <% if(it.error){ %>
-        <p class="error"><%= it.error %></p>
-    <% } %>
-    <button type="submit" class="btn btn-primary">Utwórz</button>
-</div>
+<% layout('./layout', {styles: ['form'], scripts: ['form']}) %>
+
+<%~ includeFile('./exercises_creator_form', {
+    equipment: it.equipment
+}) %>
+
+<aside class="subform hidden" id="equip_creator">
+<%~ includeFile('./equipment_creator_form', {close: true}) %>
+</aside>
