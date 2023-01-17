@@ -21,7 +21,16 @@
     <% }) %>
     <% } %>
     <script src="https://cdn.jsdelivr.net/npm/less"></script>
-
+    <script type="text/javascript">
+        window.addEventListener('load', function(){
+            const btn = document.getElementById('cockpit-btn');
+            if(btn){
+                btn.addEventListener('click', function(){
+                    location.href = "/";
+                });
+            }
+        });
+    </script>
 </head>
 <body>
     <main>
