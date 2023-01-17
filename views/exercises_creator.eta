@@ -33,7 +33,7 @@
     <% if(it.equipment) {%>
     <% it.equipment.forEach((e) => { %>
     <div class="col-2 panel">
-        <input class="form-check-input d-none" type="checkbox" name="equipment-<%=encodeURI(e)%>" id="<%=encodeURI(e[0])%>">
+        <input class="form-check-input d-none" type="checkbox" name="equipment-<%=encodeURI(e[0])%>" id="<%=encodeURI(e[0])%>">
         <label class="form-check-label" for="<%=encodeURI(e[0])%>">
             <div class="selected"></div>
             <% if(e[1] == 'T') {%>
