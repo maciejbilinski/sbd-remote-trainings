@@ -80,10 +80,10 @@ const bootstrap = async () => {
     try{
       pool = await getPool();
       connection = await pool.getConnection();
-      result = (await connection.execute(`SELECT nazwa FROM sprzet`, [], { outFormat: OUT_FORMAT_ARRAY } )).rows;
+      result = (await connection.execute(`SELECT nazwa, ma_zdjecie FROM sprzet`, [], { outFormat: OUT_FORMAT_ARRAY } )).rows;
       if(result){
           res.render("exercises_creator", {
-            equipment: [].concat.apply([], (result as never[]))
+            equipment: result
           });
         }else res.status(500)
     }catch(err){
@@ -199,7 +199,7 @@ const bootstrap = async () => {
     }
   });
 
-  app.post('/equipment-creator/:redirect?', checkLoggedIn, fileUpload(), async (req: Request, res: Response) => {
+  app.post('/equipment-creator', checkLoggedIn, fileUpload(), async (req: Request, res: Response) => {
     if(req.body.name && req.body.type){
       if(['y', 'n'].includes(req.body.type)){
         let pool, connection, result;
@@ -225,12 +225,17 @@ const bootstrap = async () => {
                 }
 
                 if(!error){
-                  await connection.execute(`INSERT INTO sprzet (nazwa, ma_zdjecie, czy_rozne_obciazenie) VALUES (:nazwa, :ma_zdjecie, :czy_rozne_obciazenie)`, [
+                  var data = [
                     req.body.name,
                     boolToDB(req.files?.photo !== undefined),
                     boolToDB(req.body.type === 'y')
-                  ], {autoCommit: true});
-                  res.json({success: true});
+                  ];
+                  await connection.execute(`INSERT INTO sprzet (nazwa, ma_zdjecie, czy_rozne_obciazenie) VALUES (:nazwa, :ma_zdjecie, :czy_rozne_obciazenie)`, data, {autoCommit: true});
+                  res.json({success: true, data: {
+                    name: data[0],
+                    photo: data[1],
+                    type: data[2]
+                  }});
                 }
               }else{
                 res.json({
@@ -281,7 +286,7 @@ const bootstrap = async () => {
                   const video = (req.files.video as UploadedFile);
                   const ext = getExtension(video.name);
                   if(!['mp4'].includes(ext)){
-                    res.render("exercises_creator", {
+                    res.json({
                       error: "Niepoprawny format instruktażu! Dozwolone to: 'mp4'."
                     });
                     error = true;
@@ -291,15 +296,23 @@ const bootstrap = async () => {
                 }
 
                 if(!error){
-                  await connection.execute(`INSERT INTO cwiczenia (nazwa, ma_instruktaz, czy_powtorzeniowe) VALUES (:nazwa, :ma_instruktaz, :czy_powtorzeniowe)`, [
+                  var data = [
                     req.body.name,
                     boolToDB(req.files?.video !== undefined),
                     boolToDB(req.body.type === 'y')
-                  ], {autoCommit: true});
-                  res.redirect('/created/ćwiczenie');
+                  ];
+                  await connection.execute(`INSERT INTO cwiczenia (nazwa, ma_instruktaz, czy_powtorzeniowe) VALUES (:nazwa, :ma_instruktaz, :czy_powtorzeniowe)`, data, {autoCommit: true});
+                  res.json({
+                    success: true,
+                    data: {
+                      name: data[0],
+                      video: data[1],
+                      type: data[2]
+                    }
+                  });
                 }
               }else{
-                res.render("exercises_creator", {
+                res.json({
                   error: "Ta nazwa jest już zajęta!"
                 });
               }
@@ -313,12 +326,12 @@ const bootstrap = async () => {
           await pool?.close();
         }
       }else{
-        res.render("exercises_creator", {
+        res.json({
           error: "Niepoprawna wartość pola \"Typ ćwiczenia\"!"
         });
       }
     }else{
-      res.render("exercises_creator", {
+      res.json({
         error: "Nie wypełniono obowiązkowych pól!"
       });
     }

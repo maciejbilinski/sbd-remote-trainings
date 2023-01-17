@@ -1,4 +1,4 @@
-<% layout('./form') %>
+<% layout('./form', {desc: 'ćwiczenie'}) %>
 <h1 class="text-center">
     <a href="/" class="back"><span class="material-symbols-outlined">arrow_back</span></a> Kreator ćwiczeń
 </h1>
@@ -33,11 +33,13 @@
     <% if(it.equipment) {%>
     <% it.equipment.forEach((e) => { %>
     <div class="col-2 panel">
-        <input class="form-check-input d-none" type="checkbox" name="equipment-<%=encodeURI(e)%>" id="<%=encodeURI(e)%>">
-        <label class="form-check-label" for="<%=encodeURI(e)%>">
+        <input class="form-check-input d-none" type="checkbox" name="equipment-<%=encodeURI(e)%>" id="<%=encodeURI(e[0])%>">
+        <label class="form-check-label" for="<%=encodeURI(e[0])%>">
             <div class="selected"></div>
-            <img src="/files/equipment/<%= e %>.png" onerror="this.style.display='none';">
-            <p class="equip-name"><%= e %></p>
+            <% if(e[1] == 'T') {%>
+            <img src="/files/equipment/<%= e[0] %>.png" onerror="this.style.display='none';">
+            <% } %>
+            <p class="equip-name"><%= e[0] %></p>
         </label>
     </div>
     <% }) %>
