@@ -21,16 +21,11 @@
     <% }) %>
     <% } %>
     <script src="https://cdn.jsdelivr.net/npm/less"></script>
-    <script type="text/javascript">
-        window.addEventListener('load', function(){
-            const btn = document.getElementById('cockpit-btn');
-            if(btn){
-                btn.addEventListener('click', function(){
-                    location.href = "/";
-                });
-            }
-        });
-    </script>
+    <% if(it.scripts) {%>
+    <% it.scripts.forEach((script) => { %>
+    <script type="text/javascript" src="../scripts/<%=script%>.js"></script>
+    <% }) %>
+    <% } %>
 </head>
 <body>
     <main>

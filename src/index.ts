@@ -31,6 +31,7 @@ const bootstrap = async () => {
   }));
   app.use('/styles', express.static('./styles'));
   app.use('/img', express.static('./img'));
+  app.use('/scripts', express.static('./scripts'));
   app.use('/files', express.static('./files'));
 
   // eta settings
@@ -198,7 +199,7 @@ const bootstrap = async () => {
     }
   });
 
-  app.post('/equipment-creator', checkLoggedIn, fileUpload(), async (req: Request, res: Response) => {
+  app.post('/equipment-creator/:redirect?', checkLoggedIn, fileUpload(), async (req: Request, res: Response) => {
     if(req.body.name && req.body.type){
       if(['y', 'n'].includes(req.body.type)){
         let pool, connection, result;
