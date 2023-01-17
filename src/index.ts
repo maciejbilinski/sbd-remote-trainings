@@ -270,7 +270,6 @@ const bootstrap = async () => {
         equipment.push(decodeURI(key.substring(10)))
       }
     })
-    console.log(equipment);
     if(req.body.name && req.body.type){
       if(['y', 'n'].includes(req.body.type)){
         let pool, connection, result;
@@ -301,15 +300,38 @@ const bootstrap = async () => {
                     boolToDB(req.files?.video !== undefined),
                     boolToDB(req.body.type === 'y')
                   ];
-                  await connection.execute(`INSERT INTO cwiczenia (nazwa, ma_instruktaz, czy_powtorzeniowe) VALUES (:nazwa, :ma_instruktaz, :czy_powtorzeniowe)`, data, {autoCommit: true});
-                  res.json({
-                    success: true,
-                    data: {
-                      name: data[0],
-                      video: data[1],
-                      type: data[2]
+                  await connection.execute(`INSERT INTO cwiczenia (nazwa, ma_instruktaz, czy_powtorzeniowe) VALUES (:nazwa, :ma_instruktaz, :czy_powtorzeniowe)`, data, {autoCommit: false});
+                  for(const equip of equipment){
+                    result = (await connection.execute(`SELECT COUNT(*) AS n FROM sprzet WHERE nazwa=:nazwa`, [equip], { outFormat: OUT_FORMAT_OBJECT } )).rows;
+                    if(result){
+                      if(result[0]){
+                        if((result[0] as {N: number}).N === 0){
+                          error = true;
+                          res.json({
+                            error: 'Próbowano powiązać ćwiczenie z nieistniejącym sprzętem!'
+                          })
+                          break;
+                        }
+                      }
                     }
-                  });
+                    await connection.execute(`
+                    INSERT INTO cwiczeniasprzet (cwiczenia_nazwa, sprzet_nazwa) VALUES (:1, :2)`, [
+                      data[0], equip
+                    ], {autoCommit: false});
+                  }
+
+                  if(!error){
+                    await connection.commit();
+                    res.json({
+                      success: true,
+                      data: {
+                        name: data[0],
+                        video: data[1],
+                        type: data[2]
+                      }
+                    });
+                  }
+
                 }
               }else{
                 res.json({
