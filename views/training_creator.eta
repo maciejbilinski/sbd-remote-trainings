@@ -1,4 +1,4 @@
-<% layout('./layout', {styles: ['form'], scripts: ['form']}) %>
+<% layout('./layout', {styles: ['form'], scripts: ['form', 'subform']}) %>
 
 <%~ includeFile('./training_creator_form', {
     exercises: it.exercises

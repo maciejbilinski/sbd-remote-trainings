@@ -1,0 +1,96 @@
+<% layout('./layout', {styles: ['plan', 'form'], scripts: ['subform', 'date_input', 'plan_creator']}) %>
+<section class="content" data-bs-theme="light">
+    <h1 class="text-center">
+        <a href="javascript:history.back()" class="back"><span class="material-symbols-outlined">arrow_back</span></a> Kreator planu treningowego
+    </h1>
+    <form action="/" method="POST" class="full-width">
+        <div class="form-group">
+            <label for="name">Data zakończenia:</label>
+            <input type="text" class="form-control date-input" name="end" id="end" placeholder="Brak" <% if(it.end){ %> value="<%=it.end%>" <%}%>>
+        </div>
+        <div class="form-group">
+            <label class="with-icon"><span class='material-symbols-outlined add-circle' subform-id="training_day_creator">add_circle</span> Dni treningowe:</label>
+            <div class="container list-container" id="days-container">
+                <% if(it.days) {%>
+                <% it.days.forEach((e, index) => { %>
+                <div class="list-item" item-id="<%=index%>">
+                    <input type="hidden" name="days[<%=index%>][dow]" value="<%= e[0] %>">
+                    <input type="hidden" name="days[<%=index%>][hour]" value="<%= e[1] %>">
+                    <%if(e[2]){%>  
+                    <input type="hidden" name="days[<%=index%>][not-dow]" value="<%= e[3] %>">
+                    <input type="hidden" name="days[<%=index%>][not-hour]" value="<%= e[4] %>">
+                    <%}%>
+
+                    <div class="list-data">
+                        <span class='material-symbols-outlined delete' item-id="<%=index%>">delete</span><span><%= e[0] %> <%= e[1] %></span>
+                    </div>
+                    <%if(e[2]){%>  
+                    <div class="list-data">
+                        <span class="material-symbols-outlined">notifications</span><span><%= e[3] %> <%= e[4] %></span>
+                    </div>
+                    <%}%>
+                </div>
+                <% }) %>
+                <% } %>
+            </div>
+        </div>
+        <div class="text-center">
+            <button type="submit" class="btn btn-primary">
+                Zapisz
+            </button>
+        </div>
+    </form>
+    <aside class="subform hidden" id="training_day_creator">
+        <section class="content" data-bs-theme="light">
+            <h1 class="text-center">
+                <a href="#" class="close red"><span class="material-symbols-outlined">close</span></a> Dzień treningowy
+            </h1>
+            <form action="/" method="POST" class="full-width">
+                <div class="form-group">
+                    <label for="dow"><sup class="red">*</sup>Dzień tygodnia:</label>
+                    <select class="form-select" name="dow" id="dow" value="" required>
+                        <option value="PN">Poniedziałek</option>
+                        <option value="WT">Wtorek</option>
+                        <option value="SR">Środa</option>
+                        <option value="CZ">Czwartek</option>
+                        <option value="PT">Piątek</option>
+                        <option value="SB">Sobota</option>
+                        <option value="ND">Niedziela</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="name"><sup class="red">*</sup>Godzina:</label>
+                    <input type="time" class="form-control" name="hour" id="hour" required>
+                </div>
+                <div class="form-group">
+                    <input type="checkbox" class="form-check-input" name="notification" id="notification">
+                    <label class="form-check-label" for="notification">Przypominajka</label>
+                    <div id="notification-controls">
+                        <div class="form-group">
+                            <label for="dow"><sup class="red">*</sup>Dzień tygodnia:</label>
+                            <select class="form-select" name="not-dow" id="not-dow" required disabled>
+                                <option value="PN">Poniedziałek</option>
+                                <option value="WT">Wtorek</option>
+                                <option value="SR">Środa</option>
+                                <option value="CZ">Czwartek</option>
+                                <option value="PT">Piątek</option>
+                                <option value="SB">Sobota</option>
+                                <option value="ND">Niedziela</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="name"><sup class="red">*</sup>Godzina:</label>
+                            <input type="time" class="form-control" name="not-hour" id="not-hour" required disabled>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="text-center">
+                    <button type="submit" class="btn btn-primary">
+                        Dodaj
+                    </button>
+                </div>
+            </form>
+        </section>
+    </aside>
+</section>

@@ -3,6 +3,7 @@
 @primary-light: #ae52d4;
 @red: #f44336;
 @gray: #aaa;
+@green: #1c7922;
 body{
     background-image: url('../img/bg.png');
     background-repeat: repeat;
@@ -81,5 +82,19 @@ body{
     transition: color .5s;
     &:hover{
         color: #AAA;
+    }
+}
+label.with-icon{
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    padding-bottom: 5px;
+}
+.add-circle{
+    color: @green;
+    transition: color .5s;
+    cursor: pointer;
+    &:hover{
+        color: lighten(@green, 20%);
     }
 }
