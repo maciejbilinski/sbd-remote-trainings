@@ -11,13 +11,17 @@
     <p>Nazwa użytkownika: <span style="font-weight:bold;"><%~ it.username %></span></p>
     <div class="form-container">
     <form action="/account-settings" method="POST">
-        <p>Preferowane jednostki: <%~ it.unit %></p>
+        <p>Preferowane jednostki:</p>
         <div class="form-check">
-            <input type="radio" name="unit" value="K" id="K" class="form-check-input">
+            <input type="radio" name="unit" value="K" id="K" class="form-check-input"
+                <% if (it.unit === 'K') { %> checked <% } %> 
+            >
             <label for="K" class="form-check-label">Kilogramy [kg]</label>
         </div>
         <div class="form-check">
-            <input type="radio" name="unit" value="L" id="L" class="form-check-input">
+            <input type="radio" name="unit" value="L" id="L" class="form-check-input"
+                <% if (it.unit === 'L' ) { %> checked <% } %>
+            >
             <label for="L" class="form-check-label">Funty [lbs]</label>
         </div>
         <input type="submit" class="btn btn-primary" value="Zapisz">

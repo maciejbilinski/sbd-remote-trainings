@@ -117,7 +117,6 @@ const bootstrap = async () => {
   });
 
   app.get('/account-settings', checkLoggedIn, async (req: Request, res: Response) => {
-    if (!req.session.unit) {
       const username = req.session.username;
       let pool, connection, result;
       try {
@@ -126,8 +125,7 @@ const bootstrap = async () => {
         result = (await connection.execute(`SELECT preferowana_jednostka FROM uzytkownicy WHERE login=:login`, [username], { outFormat: OUT_FORMAT_OBJECT })).rows;
         if (result) {
           if (result[0]) {
-            req.session.unit = (result[0] as { PREFEROWANA_JEDNOSTKA: string }).PREFEROWANA_JEDNOSTKA;
-            req.session.save();
+            res.render('account-settings', { username: req.session.username, unit: (result[0] as { PREFEROWANA_JEDNOSTKA: string }).PREFEROWANA_JEDNOSTKA });
           }
         }
       } catch (err) {
@@ -137,9 +135,6 @@ const bootstrap = async () => {
         await connection?.close();
         await pool?.close();
       }
-    } else {
-      res.render('account-settings', { username: req.session.username, unit: req.session.unit });
-    }
   });
 
   // Handle logout
@@ -195,6 +190,36 @@ const bootstrap = async () => {
       }
     }else{
       res.status(404);
+    }
+  });
+
+  app.post('/account-settings', checkLoggedIn, async (req: Request, res: Response) => {
+    if (req.body.unit) {
+      if(['K', 'L'].includes(req.body.unit)) {
+        const username = req.session.username;
+        const new_unit = req.body.unit;
+        let pool, connection, previous_unit, result;
+        try {
+          pool = await getPool();
+          connection = await pool.getConnection();
+          previous_unit = (await connection.execute(`SELECT preferowana_jednostka FROM uzytkownicy WHERE login=:login`, [username], { outFormat: OUT_FORMAT_OBJECT })).rows;
+
+          if (previous_unit) {
+            if (previous_unit[0]) {
+              if ((previous_unit[0] as { PREFEROWANA_JEDNOSTKA: string }).PREFEROWANA_JEDNOSTKA !== new_unit) {
+                result = await connection.execute(`begin ZmienJednostke(:login); end;`, [username], {autoCommit: true}); 
+              }
+              res.render('account-settings', { username: req.session.username, unit: new_unit });
+            }
+          }
+        } catch (err) {
+          console.error(err);
+          res.status(500);
+        } finally {
+          await connection?.close();
+          await pool?.close();
+        }
+      } 
     }
   });
 
