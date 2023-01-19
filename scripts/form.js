@@ -14,13 +14,25 @@ window.addEventListener('load', function(){
         form.addEventListener('submit', function(e){
             e.preventDefault();
             var data = new FormData(form)
+            var options = {
+                method: 'POST'
+            }
+            if(form.enctype === "multipart/form-data"){
+                options.body = data;
+            }else{
+                var json = {};
+                for(const key of data.keys()){
+                    json[key] = data.get(key);
+                }
+                options.body = JSON.stringify(json);
+                options['headers'] = {
+                    'Content-Type': 'application/json'
+                }
+            }
             form.getElementsByAttr('form-submit').forEach(function(submit){
                 submit.disabled = true;
             });
-            fetch(form.action, {
-                method: 'POST',
-                body: data
-            }).then(function(response){
+            fetch(form.action, options).then(function(response){
                 return response.json();
             }).then(function(json){
                 const keys = Object.keys(json);
@@ -76,6 +88,37 @@ window.addEventListener('load', function(){
                 row.appendChild(child);
                 document.getElementById('equip_creator').classList.add('hidden');
             }
+            equipC.querySelector('[name="name"]').value = "";
+            equipC.querySelector('[name="type"][value="y"]').checked = true;
+            equipC.querySelector('[name="type"][value="n"]').checked = false;
+            equipC.querySelector('[name="photo"]').value = "";
+        }
+    }
+
+    const exC = document.querySelector('#ex_creator form:first-child');
+    if(exC){
+        exC.onAdd = function(e){
+            const row = document.getElementById('training-exercises');
+            if(row){
+                const child = document.createElement('div');
+                child.classList.add('col-2', 'panel');
+                child.innerHTML = `
+                <input class="form-check-input d-none" type="checkbox" name="ex-${encodeURI(e.name)}" id="${encodeURI(e.name)}">
+                <label class="form-check-label" for="${encodeURI(e.name)}">
+                    <div class="selected"></div>
+                    <p class="ex-name">${e.name}</p>
+                </label>
+                `;
+                row.appendChild(child);
+                document.getElementById('ex_creator').classList.add('hidden');
+            }
+            exC.querySelector('[name="name"]').value = "";
+            exC.querySelector('[name="type"][value="y"]').checked = false;
+            exC.querySelector('[name="type"][value="n"]').checked = true; 
+            exC.querySelector('[name="video"]').value = "";
+            exC.querySelectorAll('[name^="equipment-"]').forEach(function(item){
+                item.checked = false;
+            })
         }
     }
 });
