@@ -1,0 +1,13 @@
+<% layout('./layout', {styles: ['form']}) %>
+
+<section class="content" data-bs-theme="light">
+    <h1 class="text-center">
+        <a href="javascript:history.back()" class="back"><span class="material-symbols-outlined">arrow_back</span></a> Błąd
+    </h1>
+    <p style="white-space: pre-line;text-align: center;">
+        <% if(it.msg){ %>
+        <%= it.msg %>
+        <% } %>
+    </p>
+    <button type="button" class="btn btn-primary" onclick="location.href='/'">Kokpit</button>
+</section>

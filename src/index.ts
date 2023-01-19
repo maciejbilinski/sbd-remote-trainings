@@ -8,6 +8,36 @@ import { OUT_FORMAT_ARRAY, OUT_FORMAT_OBJECT } from 'oracledb';
 import fileUpload, { UploadedFile } from 'express-fileupload';
 import path from 'path';
 
+function padTo2Digits(num: number) {
+  return num.toString().padStart(2, '0');
+}
+
+function translateDaysOfWeek(value: string){
+  value = value.toUpperCase();
+  if(value === 'PN') return 'Poniedziałek';
+  else if(value === 'WT') return 'Wtorek';
+  else if(value === 'SR') return 'Środa';
+  else if(value === 'CZ') return 'Czwartek';
+  else if(value === 'PT') return 'Piątek';
+  else if(value === 'SB') return 'Sobota';
+  else if(value === 'ND') return 'Niedziela';
+  else return "?";
+}
+
+function translateNumberToHour(value: number){
+  var minutes = value % 60;
+  var hours = (value-minutes)/60;
+  return `${padTo2Digits(hours)}:${padTo2Digits(minutes)}`
+}
+
+function formatDate(date = new Date()) {
+  return [
+    date.getFullYear(),
+    padTo2Digits(date.getMonth() + 1),
+    padTo2Digits(date.getDate()),
+  ].join('-');
+}
+
 const boolToDB = (x: boolean) => {
   return (x ? 'T' : 'N');
 }
@@ -125,6 +155,73 @@ const bootstrap = async () => {
 
   app.get('/equipment-creator', checkLoggedIn, (req: Request, res: Response) => {
     res.render("equipment_creator", {});
+  });
+
+  app.get('/training-plan-creator/new-:training', checkLoggedIn, (req: Request, res: Response) => {
+    res.render('training_plan_creator', {})
+  });
+
+  app.get('/training-plan-creator/modify-:id', checkLoggedIn, async (req: Request, res: Response) => {
+    let pool, connection, result;
+    try{
+      pool = await getPool();
+      connection = await pool.getConnection();
+      result = (await connection.execute(`SELECT data_zakonczenia, uzytkownicy_login FROM plantreningowy WHERE id=:id`, [req.params.id], { outFormat: OUT_FORMAT_OBJECT } )).rows;
+
+      if(result){
+        if(result.length === 0){
+          res.render('error', {
+            msg: 'Taki plan treningowy nie istnieje.\nMożliwe, że został usunięty niedawno w równoległej sesji.'
+          })
+        }else{
+          const data = result[0] as {
+            DATA_ZAKONCZENIA: Date,
+            UZYTKOWNICY_LOGIN: string
+          };
+          if(data.UZYTKOWNICY_LOGIN !== req.session.username){
+            res.render('error', {
+              msg: 'Niestety ten plan treningowy nie należy do ciebie.\nDlatego nie możesz go modyfikować.'
+            })
+          }else{
+            if(data.DATA_ZAKONCZENIA < (new Date())){
+              res.render('error', {
+                msg: 'Niestety ten plan treningowy jest już zakończony.\nDlatego nie możesz go modyfikować.\nProponujemy stworzyć nowy.'
+              })
+            }else{
+              result = (await connection.execute(`SELECT dzien_tygodnia, godzina, dzien_tyg_przypomnienia, godz_przypomnienia FROM DNITRENINGOWE WHERE PLANTRENINGOWY_ID=:id`, [req.params.id], { outFormat: OUT_FORMAT_OBJECT } )).rows;
+              
+              if(result){
+                const days = result as {
+                  DZIEN_TYGODNIA: string,
+                  GODZINA: number,
+                  DZIEN_TYG_PRZYPOMNIENIA: string|null,
+                  GODZ_PRZYPOMNIENIA: number|null
+                }[];
+                res.render('training_plan_creator', {
+                  days: days.map((element) => [
+                    translateDaysOfWeek(element.DZIEN_TYGODNIA),
+                    translateNumberToHour(element.GODZINA),
+                    element.DZIEN_TYG_PRZYPOMNIENIA !== null && element.GODZ_PRZYPOMNIENIA !== null,
+                    element.DZIEN_TYG_PRZYPOMNIENIA == null ? undefined : translateDaysOfWeek(element.DZIEN_TYG_PRZYPOMNIENIA ),
+                    element.GODZ_PRZYPOMNIENIA === null ? undefined : translateNumberToHour(element.GODZ_PRZYPOMNIENIA ),
+                  ]),
+                  end: formatDate(data.DATA_ZAKONCZENIA)
+                })
+              }else res.status(500)
+            }
+          }
+        }
+          
+      }else res.status(500)
+    }catch(err){
+      console.error(err);
+      res.status(500);  
+      res.send('Błąd wewnętrzny')       
+        
+    }finally{
+      await connection?.close();
+      await pool?.close();
+    }
   });
 
   app.get('/training-search', checkLoggedIn, (req: Request, res: Response) => {
@@ -441,7 +538,6 @@ const bootstrap = async () => {
       });
     }
   });
-
 
   app.post('/training-creator', checkLoggedIn, async (req: Request, res: Response) => {
     var exercises: string[] = [];
