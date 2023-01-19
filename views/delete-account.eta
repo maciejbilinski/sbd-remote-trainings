@@ -1,0 +1,21 @@
+<% layout('./layout', {styles: ['welcome', 'cockpit']}) %>
+<section class="content" data-bs-theme="dark">
+    <% if (it.incorrectTypedUsername) { %> <div class="alert alert-danger" role="alert">Niepoprawna nazwa użytkownika!</div> <% } %>
+    <div class="sub-options">
+        <a href="/account-settings">
+            <div class="flex-option">
+                <span class="material-symbols-outlined">arrow_back</span><span>Powrót</span>
+            </div>
+        </a>
+    </div>
+    <h1>Czy na pewno chcesz usunąć konto?</h1>
+    <p>Wpisz w poniższe pole nazwę użytkownika, aby potwierdzić usunięcie konta.</p>
+    <p style="font-weight:bold;">Tej operacji nie można cofnąć.</p>
+    <p>Nazwa użytkownika: <span style="font-weight:bold;"><%~ it.username %></span></p>
+    <div class="form-container">
+    <form action="/delete-account" method="POST">
+        <input type="text" class="form-control" style="text-transform:uppercase;" name="typed_username"><br>
+        <input type="submit" class="btn btn-danger" value="Usuń konto">
+    </form>
+    </div>
+</section>
