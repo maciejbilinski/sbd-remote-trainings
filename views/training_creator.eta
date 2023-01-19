@@ -1,0 +1,17 @@
+<% layout('./layout', {styles: ['form'], scripts: ['form']}) %>
+
+<%~ includeFile('./training_creator_form', {
+    exercises: it.exercises
+}) %>
+
+<aside class="subform hidden" id="ex_creator">
+<%~ includeFile('./exercises_creator_form', {
+    close: true,
+    equipment: it.equipment
+}) %>
+</aside>
+
+<aside class="subform hidden" id="equip_creator">
+<%~ includeFile('./equipment_creator_form', {close: true}) %>
+</aside>
+

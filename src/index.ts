@@ -23,7 +23,7 @@ const bootstrap = async () => {
   // express settings
   const app: Express = express();
   app.use(express.json());
-  app.use(express.urlencoded());
+  app.use(express.urlencoded({extended: true}));
   app.use(session({
     resave: false,
     saveUninitialized: true,
@@ -71,8 +71,32 @@ const bootstrap = async () => {
     })
   });
 
-  app.get('/training-creator', checkLoggedIn, (req: Request, res: Response) => {
-    res.send('Kreator treningów');
+  app.get('/training-creator', checkLoggedIn, async (req: Request, res: Response) => {
+    let pool, connection, result;
+    try{
+      pool = await getPool();
+      connection = await pool.getConnection();
+      result = (await connection.execute(`SELECT nazwa FROM cwiczenia`, [], { outFormat: OUT_FORMAT_ARRAY } )).rows;
+      if(result){
+          
+          let result2 = (await connection.execute(`SELECT nazwa, ma_zdjecie FROM sprzet`, [], { outFormat: OUT_FORMAT_ARRAY } )).rows;
+          if(result2){
+            res.render("training_creator", {
+              exercises: result.flat(),
+              equipment: result2
+            });
+            }else res.status(500)
+        }else res.status(500)
+    }catch(err){
+      console.error(err);
+      res.status(500);  
+      res.send('Błąd wewnętrzny')       
+        
+    }finally{
+      await connection?.close();
+      await pool?.close();
+    }
+
   });
 
   app.get('/exercise-creator', checkLoggedIn, async (req: Request, res: Response) => {
@@ -361,6 +385,97 @@ const bootstrap = async () => {
     }else{
       res.json({
         error: "Nie wypełniono obowiązkowych pól!"
+      });
+    }
+  });
+
+
+  app.post('/training-creator', checkLoggedIn, async (req: Request, res: Response) => {
+    var exercises: string[] = [];
+    Object.keys(req.body).forEach((key) => {
+      if(key.startsWith("ex-")){
+        exercises.push(decodeURI(key.substring(3)))
+      }
+    })
+    if(req.body.name && req.body.privacy){
+      if(['y', 'n'].includes(req.body.privacy)){
+        let pool, connection, result;
+        try{
+          pool = await getPool();
+          connection = await pool.getConnection();
+          result = (await connection.execute(`SELECT COUNT(*) AS n FROM treningi WHERE nazwa=:nazwa`, [req.body.name], { outFormat: OUT_FORMAT_OBJECT } )).rows;
+          if(result){
+            if(result[0]){
+              if((result[0] as {N: number}).N === 0){
+                result = (await connection.execute(`SELECT COUNT(*) AS n FROM uzytkownicy WHERE login=:login`, [req.session.username], { outFormat: OUT_FORMAT_OBJECT } )).rows;
+                if(result){
+                  if(result[0]){
+                    if((result[0] as {N: number}).N === 1){
+
+                      var error = false;
+                      var data = [
+                        req.body.name,
+                        boolToDB(req.body.privacy === 'y'),
+                        req.session.username
+                      ];
+                      await connection.execute(`INSERT INTO treningi (nazwa, czy_prywatny, uzytkownicy_login) VALUES (:nazwa, :czy_prywatny, :uzytkownicy_login)`, data, {autoCommit: false});
+                      for(const ex of exercises){
+                        result = (await connection.execute(`SELECT COUNT(*) AS n FROM cwiczenia WHERE nazwa=:nazwa`, [ex], { outFormat: OUT_FORMAT_OBJECT } )).rows;
+                        if(!result || !result[0] || (result[0] as {N: number}).N === 0){
+                          error = true;
+                          res.json({
+                            error: 'Próbowano powiązać trening z nieistniejącym ćwiczeniem!'
+                          })
+                          break;
+                        }
+                        await connection.execute(`
+                        INSERT INTO cwiczeniatreningi (cwiczenia_nazwa, treningi_nazwa) VALUES (:1, :2)`, [
+                          ex, data[0]
+                        ], {autoCommit: false});
+                      }
+
+                      if(!error){
+                        await connection.commit();
+                        res.json({
+                          success: true,
+                          data: {
+                            name: data[0],
+                            privacy: data[1]
+                          }
+                        });
+                      }
+                    }else{
+                      res.json({
+                        error: "Twoje konto nie istnieje!"
+                      })
+                    }
+                  }else res.status(500)
+                }else res.status(500)
+              }else{
+                res.json({
+                  error: "Ta nazwa jest już zajęta!"
+                });
+              }
+            }else res.status(500)
+          }else res.status(500)
+        }catch(err){
+          console.error(err);
+          res.status(500);   
+          res.json({
+            error: 'Błąd wewnętrzny'
+          })       
+        }finally{
+          await connection?.close();
+          await pool?.close();
+        }
+      }else{
+        res.json({
+          error: "Niepoprawna wartość pola \"Prywatność\"!"
+        });
+      }
+    }else{
+      res.json({
+        error: "Nie wypełniono obowiązkowych pól!" + JSON.stringify(req.body)
       });
     }
   });

@@ -1,5 +1,5 @@
 <section class="content" data-bs-theme="light">
-    <form method="POST" enctype="multipart/form-data" ajax-form form-redirect="<%=it.desc%>" action="/<%=it.action%>">
+    <form method="POST" <% if(it.withFiles){ %>enctype="multipart/form-data"<%}%> ajax-form form-redirect="<%=it.desc%>" action="/<%=it.action%>">
         <%~ it.body %>
         <div class="text-center">
             <p class="error" form-error></p>
