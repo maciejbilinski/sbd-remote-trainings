@@ -125,7 +125,7 @@ const bootstrap = async () => {
         result = (await connection.execute(`SELECT preferowana_jednostka FROM uzytkownicy WHERE login=:login`, [username], { outFormat: OUT_FORMAT_OBJECT })).rows;
         if (result) {
           if (result[0]) {
-            res.render('account-settings', { username: req.session.username, unit: (result[0] as { PREFEROWANA_JEDNOSTKA: string }).PREFEROWANA_JEDNOSTKA });
+            res.render('account-settings', { username: req.session.username, unit: (result[0] as { PREFEROWANA_JEDNOSTKA: string }).PREFEROWANA_JEDNOSTKA, unitCorrectlyChanged: false });
           }
         }
       } catch (err) {
@@ -135,6 +135,10 @@ const bootstrap = async () => {
         await connection?.close();
         await pool?.close();
       }
+  });
+
+  app.get('/delete-account', checkLoggedIn, (req: Request, res: Response) => {
+    res.render('delete-account', {username: req.session.username, incorrectTypedUsername: false});
   });
 
   // Handle logout
@@ -209,7 +213,7 @@ const bootstrap = async () => {
               if ((previous_unit[0] as { PREFEROWANA_JEDNOSTKA: string }).PREFEROWANA_JEDNOSTKA !== new_unit) {
                 result = await connection.execute(`begin ZmienJednostke(:login); end;`, [username], {autoCommit: true}); 
               }
-              res.render('account-settings', { username: req.session.username, unit: new_unit });
+              res.render('account-settings', { username: req.session.username, unit: new_unit, unitCorrectlyChanged: ((previous_unit[0] as { PREFEROWANA_JEDNOSTKA: string }).PREFEROWANA_JEDNOSTKA !== new_unit) });
             }
           }
         } catch (err) {
@@ -220,6 +224,30 @@ const bootstrap = async () => {
           await pool?.close();
         }
       } 
+    }
+  });
+
+  app.post('/delete-account', checkLoggedIn, async (req: Request, res: Response) => {
+    const typed_username = req.body.typed_username.toUpperCase();
+    const username = req.session.username;
+    if (typed_username !== username) {
+      res.render('delete-account', { username: username, incorrectTypedUsername: true });
+    } else {
+      res.redirect('/logout');
+      let pool, connection, result;
+      try {
+        pool = await getPool();
+        connection = await pool.getConnection();
+        
+        // TODO: moze trzeba usunac wiecej niz tylko z tabeli 'uzytkownicy'
+        result = (await connection.execute(`DELETE FROM uzytkownicy WHERE login=:login`, [username], { autoCommit: true }));
+      } catch (err) {
+        console.error(err);
+        res.status(500);
+      } finally {
+        await connection?.close();
+        await pool?.close();
+      }
     }
   });
 
