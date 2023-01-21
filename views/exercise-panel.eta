@@ -1,0 +1,40 @@
+<% layout('./layout', {styles: ['welcome', 'cockpit' ], scripts: ['search']}) %>
+<section class="content" data-bs-theme="dark">
+    <% if (it.gradeSuccess) { %>
+        <div class="alert alert-success" role="alert">Pomyślnie oceniono ćwiczenie.</div>
+        <% } %>
+    <div class="sub-options">
+        <a href="/exercise-search">
+            <div class="flex-option">
+                <span class="material-symbols-outlined">arrow_back</span><span>Powrót do wyszukiwarki</span>
+            </div>
+        </a>
+    </div>
+    <h1><% =it.exerciseName %></h1>
+    <div class="d-flex">
+        <div>
+            <h2>Oceń ćwiczenie</h2>
+            <div class="form-container">
+                <form action="/exercise-panel?name=<% =it.exerciseName %>" method="POST">
+                    <input type="hidden" name="exerciseName" value="<% =it.exerciseName %>">
+                    <label for="cenaSprzetu" class="form-check-label"><sup class="red">*</sup>Cena sprzętu</label>
+                    <input type="number" name="cenaSprzetu" id="cenaSprzetu" class="form-control" min="1" max="5" step="1"
+                        placeholder="1 — 5" required>
+                    <label for="trudnosc" class="form-check-label"><sup class="red">*</sup>Trudność</label>
+                    <input type="number" name="trudnosc" id="trudnosc" class="form-control" min="1" max="5" step="1"
+                        placeholder="1 — 5" required>
+                    <label for="intensywnosc" class="form-check-label"><sup class="red">*</sup>Intensywność</label>
+                    <input type="number" name="intensywnosc" id="intensywnosc" class="form-control" min="1" max="5" step="1"
+                        placeholder="1 — 5" required>
+                    <br>
+                    <input type="submit" value="Oceń" class="btn btn-success">
+                </form>
+            </div>
+        </div>
+        <div style="text-align:center; margin-left: 50px;">
+            <h2>Dodaj instruktaż</h2>
+            <input type="button" value="Dodaj" class="btn btn-primary">
+        </div>
+    </div>
+    
+</section>
