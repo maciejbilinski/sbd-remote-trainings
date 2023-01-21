@@ -298,8 +298,30 @@ const bootstrap = async () => {
     }
   });
 
-  app.get('/exercise-panel', checkLoggedIn, (req: Request, res: Response) => {
-    res.send('Nazwa ćwiczenia: ' + req.query.name);
+  app.get('/exercise-panel', checkLoggedIn, async (req: Request, res: Response) => {
+    const exerciseName = req.query.name;
+    const username = req.session.username;
+    let pool, connection, result;
+    try {
+      pool = await getPool();
+      connection = await pool.getConnection();
+      result = (await connection.execute(`SELECT COUNT(*) AS n FROM cwiczenia WHERE nazwa=:nazwa`, [exerciseName], { outFormat: OUT_FORMAT_OBJECT })).rows;
+      if (result) {
+        if (result[0]) {
+          if ((result[0] as { N: number }).N === 1) {
+            res.render('exercise-panel', { username: username, exerciseName: exerciseName});
+          } else {
+            res.redirect('/');
+          }
+        }
+      }
+    } catch (err) {
+      console.error(err);
+      res.status(500);
+    } finally {
+      await connection?.close();
+      await pool?.close();
+    }
   });
 
   app.get('/training-plans', checkLoggedIn, (req: Request, res: Response) => {
@@ -730,6 +752,27 @@ const bootstrap = async () => {
       connection = await pool.getConnection();
       await connection.execute(`INSERT INTO ocenytreningow VALUES (:skutecznosc, :trudnosc, :intensywnosc, :login, :nazwa)`, [skutecznosc, trudnosc, intensywnosc, username, trainingName], {autoCommit: true});
       res.render('training-panel', {username: username, trainingName: trainingName, trainingAuthor: trainingAuthor, gradeSuccess: true});
+    } catch (err) {
+      console.error(err);
+      res.status(500);
+    } finally {
+      await connection?.close();
+      await pool?.close();
+    }
+  });
+
+  app.post('/exercise-panel', checkLoggedIn, async (req: Request, res: Response) => {
+    const exerciseName = req.body.exerciseName;
+    const username = req.session.username;
+    const cenaSprzetu = req.body.cenaSprzetu;
+    const trudnosc = req.body.trudnosc;
+    const intensywnosc = req.body.intensywnosc;
+    let pool, connection;
+    try {
+      pool = await getPool();
+      connection = await pool.getConnection();
+      await connection.execute(`INSERT INTO ocenycwiczen VALUES (:cenaSprzetu, :trudnosc, :intensywnosc, :login, :nazwa)`, [cenaSprzetu, trudnosc, intensywnosc, username, exerciseName], { autoCommit: true });
+      res.render('exercise-panel', { username: username, exerciseName: exerciseName, gradeSuccess: true });
     } catch (err) {
       console.error(err);
       res.status(500);
