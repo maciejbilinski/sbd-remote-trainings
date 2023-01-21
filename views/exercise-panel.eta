@@ -1,26 +1,24 @@
 <% layout('./layout', {styles: ['welcome', 'cockpit' ], scripts: ['search']}) %>
 <section class="content" data-bs-theme="dark">
     <% if (it.gradeSuccess) { %>
-        <div class="alert alert-success" role="alert">Pomyślnie oceniono trening.</div>
+        <div class="alert alert-success" role="alert">Pomyślnie oceniono ćwiczenie.</div>
         <% } %>
     <div class="sub-options">
-        <a href="/training-search">
+        <a href="/exercise-search">
             <div class="flex-option">
                 <span class="material-symbols-outlined">arrow_back</span><span>Powrót do wyszukiwarki</span>
             </div>
         </a>
     </div>
-    <h1><% =it.trainingName %></h1>
-    <h2>Autor treningu: <% =it.trainingAuthor %></h2>
+    <h1><% =it.exerciseName %></h1>
     <div class="d-flex">
         <div>
-            <h2>Oceń trening</h2>
+            <h2>Oceń ćwiczenie</h2>
             <div class="form-container">
-                <form action="/training-panel?name=<% =it.trainingName %>&author=<%=it.trainingAuthor %>" method="POST">
-                    <input type="hidden" name="trainingName" value="<% =it.trainingName %>">
-                    <input type="hidden" name="trainingAuthor" value="<% =it.trainingAuthor %>">
-                    <label for="skutecznosc" class="form-check-label"><sup class="red">*</sup>Skuteczność</label>
-                    <input type="number" name="skutecznosc" id="skutecznosc" class="form-control" min="1" max="5" step="1"
+                <form action="/exercise-panel?name=<% =it.exerciseName %>" method="POST">
+                    <input type="hidden" name="exerciseName" value="<% =it.exerciseName %>">
+                    <label for="cenaSprzetu" class="form-check-label"><sup class="red">*</sup>Cena sprzętu</label>
+                    <input type="number" name="cenaSprzetu" id="cenaSprzetu" class="form-control" min="1" max="5" step="1"
                         placeholder="1 — 5" required>
                     <label for="trudnosc" class="form-check-label"><sup class="red">*</sup>Trudność</label>
                     <input type="number" name="trudnosc" id="trudnosc" class="form-control" min="1" max="5" step="1"
@@ -34,8 +32,8 @@
             </div>
         </div>
         <div style="text-align:center; margin-left: 50px;">
-            <h2>Dodaj do planu treningowego</h2>
-            <input type="button" value="Kreator planu" class="btn btn-primary">
+            <h2>Dodaj instruktaż</h2>
+            <input type="button" value="Dodaj" class="btn btn-primary">
         </div>
     </div>
     

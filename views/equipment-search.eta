@@ -7,11 +7,11 @@
             </div>
         </a>
     </div>
-    <h1>Wyszukiwarka treningów</h1>
-    <p>Tutaj możesz wyszukać wszystkie publiczne treningi innych użytkowników.</p>
-    <p>Dostępne są również wszystkie Twoje treningi. Prywatne treningi oznaczone są <i>pochyloną czcionką</i>.</p>
+    <h1>Wyszukiwarka sprzętu</h1>
+    <p>Tutaj możesz wyszukać sprzęt.</p>
+    <p>Po kliknięciu w nazwę sprzętu istnieje możliwość dodania zdjęcia, jeśli takowego nie posiada.</p>
     <div class="d-flex">
-        <input type="text" placeholder="Nazwa treningu" class="form-control" id="search-box">
+        <input type="text" placeholder="Nazwa sprzętu" class="form-control" id="search-box">
     </div>
     <br>
     <div class="form-container">
@@ -19,8 +19,9 @@
             <thead>
                 <tr>
                     <th scope="col">#</th>
-                    <th scope="col">Nazwa treningu</th>
-                    <th scope="col">Autor</th>
+                    <th scope="col">Nazwa sprzętu</th>
+                    <th scope="col">Zdjęcie</th>
+                    <th scope="col">Różne obciążenie</th>
                 </tr> 
             </thead>
             <tbody>
@@ -29,11 +30,12 @@
                     <tr>
                         <td><%= n+1 %></td>
                         <td class="td-name">
-                            <a href="training-panel?name=<%= col[0] %>&author=<%= col[2] %>" style="text-decoration:none; color:inherit;">
-                            <% if (col[1] === 'T') { %><i><% } %><%= col[0] %><% if (col[1] === 'T' ) { %></i><% } %>
+                            <a href="equipment-panel?name=<%= col[0] %>" style="text-decoration:none; color:inherit;">
+                            <%= col[0] %>
                             </a>
                         </td>
-                        <td><%= col[2] %></td>
+                        <td><% col[1] === 'T' ? %><span style="color:lime;">&check;</span><% : %> <% %></td>
+                        <td><% col[2] === 'T' ? %><span style="color:lime;">&check;</span><% : %> <% %></td>
                     </tr>
                 <% })} %>
             </tbody>
