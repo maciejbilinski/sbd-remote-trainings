@@ -9,6 +9,36 @@ import fileUpload, { UploadedFile } from 'express-fileupload';
 import path from 'path';
 import { traceDeprecation } from 'process';
 
+function padTo2Digits(num: number) {
+  return num.toString().padStart(2, '0');
+}
+
+function translateDaysOfWeek(value: string){
+  value = value.toUpperCase();
+  if(value === 'PN') return 'Poniedziałek';
+  else if(value === 'WT') return 'Wtorek';
+  else if(value === 'SR') return 'Środa';
+  else if(value === 'CZ') return 'Czwartek';
+  else if(value === 'PT') return 'Piątek';
+  else if(value === 'SB') return 'Sobota';
+  else if(value === 'ND') return 'Niedziela';
+  else return "?";
+}
+
+function translateNumberToHour(value: number){
+  var minutes = value % 60;
+  var hours = (value-minutes)/60;
+  return `${padTo2Digits(hours)}:${padTo2Digits(minutes)}`
+}
+
+function formatDate(date = new Date()) {
+  return [
+    date.getFullYear(),
+    padTo2Digits(date.getMonth() + 1),
+    padTo2Digits(date.getDate()),
+  ].join('-');
+}
+
 const boolToDB = (x: boolean) => {
   return (x ? 'T' : 'N');
 }
@@ -24,7 +54,7 @@ const bootstrap = async () => {
   // express settings
   const app: Express = express();
   app.use(express.json());
-  app.use(express.urlencoded());
+  app.use(express.urlencoded({extended: true}));
   app.use(session({
     resave: false,
     saveUninitialized: true,
@@ -72,8 +102,32 @@ const bootstrap = async () => {
     })
   });
 
-  app.get('/training-creator', checkLoggedIn, (req: Request, res: Response) => {
-    res.send('Kreator treningów');
+  app.get('/training-creator', checkLoggedIn, async (req: Request, res: Response) => {
+    let pool, connection, result;
+    try{
+      pool = await getPool();
+      connection = await pool.getConnection();
+      result = (await connection.execute(`SELECT nazwa FROM cwiczenia`, [], { outFormat: OUT_FORMAT_ARRAY } )).rows;
+      if(result){
+          
+          let result2 = (await connection.execute(`SELECT nazwa, ma_zdjecie FROM sprzet`, [], { outFormat: OUT_FORMAT_ARRAY } )).rows;
+          if(result2){
+            res.render("training_creator", {
+              exercises: result.flat(),
+              equipment: result2
+            });
+            }else res.status(500)
+        }else res.status(500)
+    }catch(err){
+      console.error(err);
+      res.status(500);  
+      res.send('Błąd wewnętrzny')       
+        
+    }finally{
+      await connection?.close();
+      await pool?.close();
+    }
+
   });
 
   app.get('/exercise-creator', checkLoggedIn, async (req: Request, res: Response) => {
@@ -81,15 +135,17 @@ const bootstrap = async () => {
     try{
       pool = await getPool();
       connection = await pool.getConnection();
-      result = (await connection.execute(`SELECT nazwa FROM sprzet`, [], { outFormat: OUT_FORMAT_ARRAY } )).rows;
+      result = (await connection.execute(`SELECT nazwa, ma_zdjecie FROM sprzet`, [], { outFormat: OUT_FORMAT_ARRAY } )).rows;
       if(result){
           res.render("exercises_creator", {
-            equipment: [].concat.apply([], (result as never[]))
+            equipment: result
           });
         }else res.status(500)
     }catch(err){
       console.error(err);
-      res.status(500);          
+      res.status(500);  
+      res.send('Błąd wewnętrzny')       
+        
     }finally{
       await connection?.close();
       await pool?.close();
@@ -100,6 +156,73 @@ const bootstrap = async () => {
 
   app.get('/equipment-creator', checkLoggedIn, (req: Request, res: Response) => {
     res.render("equipment_creator", {});
+  });
+
+  app.get('/training-plan-creator/new-:training', checkLoggedIn, (req: Request, res: Response) => {
+    res.render('training_plan_creator', {})
+  });
+
+  app.get('/training-plan-creator/modify-:id', checkLoggedIn, async (req: Request, res: Response) => {
+    let pool, connection, result;
+    try{
+      pool = await getPool();
+      connection = await pool.getConnection();
+      result = (await connection.execute(`SELECT data_zakonczenia, uzytkownicy_login FROM plantreningowy WHERE id=:id`, [req.params.id], { outFormat: OUT_FORMAT_OBJECT } )).rows;
+
+      if(result){
+        if(result.length === 0){
+          res.render('error', {
+            msg: 'Taki plan treningowy nie istnieje.\nMożliwe, że został usunięty niedawno w równoległej sesji.'
+          })
+        }else{
+          const data = result[0] as {
+            DATA_ZAKONCZENIA: Date,
+            UZYTKOWNICY_LOGIN: string
+          };
+          if(data.UZYTKOWNICY_LOGIN !== req.session.username){
+            res.render('error', {
+              msg: 'Niestety ten plan treningowy nie należy do ciebie.\nDlatego nie możesz go modyfikować.'
+            })
+          }else{
+            if(data.DATA_ZAKONCZENIA < (new Date())){
+              res.render('error', {
+                msg: 'Niestety ten plan treningowy jest już zakończony.\nDlatego nie możesz go modyfikować.\nProponujemy stworzyć nowy.'
+              })
+            }else{
+              result = (await connection.execute(`SELECT dzien_tygodnia, godzina, dzien_tyg_przypomnienia, godz_przypomnienia FROM DNITRENINGOWE WHERE PLANTRENINGOWY_ID=:id`, [req.params.id], { outFormat: OUT_FORMAT_OBJECT } )).rows;
+              
+              if(result){
+                const days = result as {
+                  DZIEN_TYGODNIA: string,
+                  GODZINA: number,
+                  DZIEN_TYG_PRZYPOMNIENIA: string|null,
+                  GODZ_PRZYPOMNIENIA: number|null
+                }[];
+                res.render('training_plan_creator', {
+                  days: days.map((element) => [
+                    translateDaysOfWeek(element.DZIEN_TYGODNIA),
+                    translateNumberToHour(element.GODZINA),
+                    element.DZIEN_TYG_PRZYPOMNIENIA !== null && element.GODZ_PRZYPOMNIENIA !== null,
+                    element.DZIEN_TYG_PRZYPOMNIENIA == null ? undefined : translateDaysOfWeek(element.DZIEN_TYG_PRZYPOMNIENIA ),
+                    element.GODZ_PRZYPOMNIENIA === null ? undefined : translateNumberToHour(element.GODZ_PRZYPOMNIENIA ),
+                  ]),
+                  end: formatDate(data.DATA_ZAKONCZENIA)
+                })
+              }else res.status(500)
+            }
+          }
+        }
+          
+      }else res.status(500)
+    }catch(err){
+      console.error(err);
+      res.status(500);  
+      res.send('Błąd wewnętrzny')       
+        
+    }finally{
+      await connection?.close();
+      await pool?.close();
+    }
   });
 
   app.get('/training-search', checkLoggedIn, async (req: Request, res: Response) => {
@@ -148,6 +271,7 @@ const bootstrap = async () => {
     }
   });
 
+
   app.get('/exercise-search', checkLoggedIn, (req: Request, res: Response) => {
     res.send('Wyszukiwarka ćwiczeń');
   });
@@ -175,6 +299,7 @@ const bootstrap = async () => {
       } catch (err) {
         console.error(err);
         res.status(500);          
+        res.send('Błąd wewnętrzny')       
       } finally {
         await connection?.close();
         await pool?.close();
@@ -222,7 +347,8 @@ const bootstrap = async () => {
             }else res.status(500)
           }catch(err){
             console.error(err);
-            res.status(500);          
+            res.status(500);   
+            res.send('Błąd wewnętrzny')       
           }finally{
             await connection?.close();
             await pool?.close();
@@ -311,7 +437,7 @@ const bootstrap = async () => {
                   const photo = (req.files.photo as UploadedFile);
                   const ext = getExtension(photo.name);
                   if(!['jpg', 'png', 'jpeg'].includes(ext)){
-                    res.render("equipment_creator", {
+                    res.json({
                       error: "Niepoprawny format zdjęcia! Dozwolone to: 'jpg', 'png', 'jpeg'."
                     });
                     error = true;
@@ -321,15 +447,20 @@ const bootstrap = async () => {
                 }
 
                 if(!error){
-                  await connection.execute(`INSERT INTO sprzet (nazwa, ma_zdjecie, czy_rozne_obciazenie) VALUES (:nazwa, :ma_zdjecie, :czy_rozne_obciazenie)`, [
+                  var data = [
                     req.body.name,
                     boolToDB(req.files?.photo !== undefined),
                     boolToDB(req.body.type === 'y')
-                  ], {autoCommit: true});
-                  res.redirect('/created/sprzęt');
+                  ];
+                  await connection.execute(`INSERT INTO sprzet (nazwa, ma_zdjecie, czy_rozne_obciazenie) VALUES (:nazwa, :ma_zdjecie, :czy_rozne_obciazenie)`, data, {autoCommit: true});
+                  res.json({success: true, data: {
+                    name: data[0],
+                    photo: data[1],
+                    type: data[2]
+                  }});
                 }
               }else{
-                res.render("equipment_creator", {
+                res.json({
                   error: "Ta nazwa jest już zajęta!"
                 });
               }
@@ -337,22 +468,26 @@ const bootstrap = async () => {
           }else res.status(500)
         }catch(err){
           console.error(err);
-          res.status(500);          
+          res.status(500);     
+          res.json({
+            error: 'Błąd wewnętrzny'
+          })      
         }finally{
           await connection?.close();
           await pool?.close();
         }
       }else{
-        res.render("equipment_creator", {
+        res.json({
           error: "Niepoprawna wartość pola \"Wykorzystuje obciążenie\"!"
         });
       }
     }else{
-      res.render("equipment_creator", {
+      res.json({
         error: "Nie wypełniono obowiązkowych pól!"
       });
     }
   });
+
   app.post('/exercise-creator', checkLoggedIn, fileUpload(), async (req: Request, res: Response) => {
     var equipment: string[] = [];
     Object.keys(req.body).forEach((key) => {
@@ -360,7 +495,6 @@ const bootstrap = async () => {
         equipment.push(decodeURI(key.substring(10)))
       }
     })
-    console.log(equipment);
     if(req.body.name && req.body.type){
       if(['y', 'n'].includes(req.body.type)){
         let pool, connection, result;
@@ -376,7 +510,7 @@ const bootstrap = async () => {
                   const video = (req.files.video as UploadedFile);
                   const ext = getExtension(video.name);
                   if(!['mp4'].includes(ext)){
-                    res.render("exercises_creator", {
+                    res.json({
                       error: "Niepoprawny format instruktażu! Dozwolone to: 'mp4'."
                     });
                     error = true;
@@ -386,15 +520,42 @@ const bootstrap = async () => {
                 }
 
                 if(!error){
-                  await connection.execute(`INSERT INTO cwiczenia (nazwa, ma_instruktaz, czy_powtorzeniowe) VALUES (:nazwa, :ma_instruktaz, :czy_powtorzeniowe)`, [
+                  var data = [
                     req.body.name,
                     boolToDB(req.files?.video !== undefined),
                     boolToDB(req.body.type === 'y')
-                  ], {autoCommit: true});
-                  res.redirect('/created/ćwiczenie');
+                  ];
+                  await connection.execute(`INSERT INTO cwiczenia (nazwa, ma_instruktaz, czy_powtorzeniowe) VALUES (:nazwa, :ma_instruktaz, :czy_powtorzeniowe)`, data, {autoCommit: false});
+                  for(const equip of equipment){
+                    result = (await connection.execute(`SELECT COUNT(*) AS n FROM sprzet WHERE nazwa=:nazwa`, [equip], { outFormat: OUT_FORMAT_OBJECT } )).rows;
+                    if(!result || !result[0] || (result[0] as {N: number}).N === 0){
+                      error = true;
+                      res.json({
+                        error: 'Próbowano powiązać ćwiczenie z nieistniejącym sprzętem!'
+                      })
+                      break;
+                    }
+                    await connection.execute(`
+                    INSERT INTO cwiczeniasprzet (cwiczenia_nazwa, sprzet_nazwa) VALUES (:1, :2)`, [
+                      data[0], equip
+                    ], {autoCommit: false});
+                  }
+
+                  if(!error){
+                    await connection.commit();
+                    res.json({
+                      success: true,
+                      data: {
+                        name: data[0],
+                        video: data[1],
+                        type: data[2]
+                      }
+                    });
+                  }
+
                 }
               }else{
-                res.render("exercises_creator", {
+                res.json({
                   error: "Ta nazwa jest już zajęta!"
                 });
               }
@@ -402,19 +563,112 @@ const bootstrap = async () => {
           }else res.status(500)
         }catch(err){
           console.error(err);
-          res.status(500);          
+          res.status(500);   
+          res.json({
+            error: 'Błąd wewnętrzny'
+          })       
         }finally{
           await connection?.close();
           await pool?.close();
         }
       }else{
-        res.render("exercises_creator", {
+        res.json({
           error: "Niepoprawna wartość pola \"Typ ćwiczenia\"!"
         });
       }
     }else{
-      res.render("exercises_creator", {
+      res.json({
         error: "Nie wypełniono obowiązkowych pól!"
+      });
+    }
+  });
+
+  app.post('/training-creator', checkLoggedIn, async (req: Request, res: Response) => {
+    var exercises: string[] = [];
+    Object.keys(req.body).forEach((key) => {
+      if(key.startsWith("ex-")){
+        exercises.push(decodeURI(key.substring(3)))
+      }
+    })
+    if(req.body.name && req.body.privacy){
+      if(['y', 'n'].includes(req.body.privacy)){
+        let pool, connection, result;
+        try{
+          pool = await getPool();
+          connection = await pool.getConnection();
+          result = (await connection.execute(`SELECT COUNT(*) AS n FROM treningi WHERE nazwa=:nazwa`, [req.body.name], { outFormat: OUT_FORMAT_OBJECT } )).rows;
+          if(result){
+            if(result[0]){
+              if((result[0] as {N: number}).N === 0){
+                result = (await connection.execute(`SELECT COUNT(*) AS n FROM uzytkownicy WHERE login=:login`, [req.session.username], { outFormat: OUT_FORMAT_OBJECT } )).rows;
+                if(result){
+                  if(result[0]){
+                    if((result[0] as {N: number}).N === 1){
+
+                      var error = false;
+                      var data = [
+                        req.body.name,
+                        boolToDB(req.body.privacy === 'y'),
+                        req.session.username
+                      ];
+                      await connection.execute(`INSERT INTO treningi (nazwa, czy_prywatny, uzytkownicy_login) VALUES (:nazwa, :czy_prywatny, :uzytkownicy_login)`, data, {autoCommit: false});
+                      for(const ex of exercises){
+                        result = (await connection.execute(`SELECT COUNT(*) AS n FROM cwiczenia WHERE nazwa=:nazwa`, [ex], { outFormat: OUT_FORMAT_OBJECT } )).rows;
+                        if(!result || !result[0] || (result[0] as {N: number}).N === 0){
+                          error = true;
+                          res.json({
+                            error: 'Próbowano powiązać trening z nieistniejącym ćwiczeniem!'
+                          })
+                          break;
+                        }
+                        await connection.execute(`
+                        INSERT INTO cwiczeniatreningi (cwiczenia_nazwa, treningi_nazwa) VALUES (:1, :2)`, [
+                          ex, data[0]
+                        ], {autoCommit: false});
+                      }
+
+                      if(!error){
+                        await connection.commit();
+                        res.json({
+                          success: true,
+                          data: {
+                            name: data[0],
+                            privacy: data[1]
+                          }
+                        });
+                      }
+                    }else{
+                      res.json({
+                        error: "Twoje konto nie istnieje!"
+                      })
+                    }
+                  }else res.status(500)
+                }else res.status(500)
+              }else{
+                res.json({
+                  error: "Ta nazwa jest już zajęta!"
+                });
+              }
+            }else res.status(500)
+          }else res.status(500)
+        }catch(err){
+          console.error(err);
+          res.status(500);   
+          res.json({
+            error: 'Błąd wewnętrzny'
+          })       
+        }finally{
+          await connection?.close();
+          await pool?.close();
+        }
+      }else{
+        res.json({
+          error: "Niepoprawna wartość pola \"Prywatność\"!"
+        });
+      }
+    }else{
+      res.json({
+        error: "Nie wypełniono obowiązkowych pól!" + JSON.stringify(req.body)
       });
     }
   });

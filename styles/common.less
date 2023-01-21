@@ -2,6 +2,8 @@
 @primary-dark: #4a0072;
 @primary-light: #ae52d4;
 @red: #f44336;
+@gray: #aaa;
+@green: #1c7922;
 body{
     background-image: url('../img/bg.png');
     background-repeat: repeat;
@@ -20,6 +22,39 @@ body{
         border-color: @primary-dark !important;
         background-color: @primary-dark !important;
     }
+    &.btn-loader{
+        margin: 0 auto;
+        display: flex;
+        align-items: center;
+        &:disabled{
+            border-color: @gray !important;
+            background-color: @gray !important;
+            > .text{
+                display: none;
+            }
+        }
+        &:not(:disabled){
+            > .loader{
+                height: 0;
+                width: 0;
+                visibility: hidden;
+            }
+            > .loader-text{
+                display: none;
+            }
+        }
+    }
+}
+@keyframes rotating {
+    from {
+        transform: rotate(0deg);
+    }
+    to {
+        transform: rotate(360deg);
+    }
+}
+.loader {
+    animation: rotating 1s linear infinite;
 }
 .red, .error{
     color: @red;
@@ -47,5 +82,19 @@ body{
     transition: color .5s;
     &:hover{
         color: #AAA;
+    }
+}
+label.with-icon{
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    padding-bottom: 5px;
+}
+.add-circle{
+    color: @green;
+    transition: color .5s;
+    cursor: pointer;
+    &:hover{
+        color: lighten(@green, 20%);
     }
 }

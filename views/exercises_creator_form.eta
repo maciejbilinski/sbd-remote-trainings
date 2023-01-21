@@ -1,0 +1,52 @@
+<% layout('./form', {desc: 'ćwiczenie', action: 'exercise-creator', withFiles: true}) %>
+<h1 class="text-center">
+<% if(it.close){%>
+    <a href="#" class="close red"><span class="material-symbols-outlined">close</span></a>
+    <% }else{ %>
+    <a href="/" class="back"><span class="material-symbols-outlined">arrow_back</span></a><%}%> Kreator ćwiczeń
+</h1>
+<div class="form-group">
+    <label for="name"><sup class="red">*</sup>Nazwa ćwiczenia:</label>
+    <input type="text" class="form-control" name="name" id="ex_name" placeholder="np. Przysiad" required>
+</div>
+<div class="form-group">
+    <label for="type"><sup class="red">*</sup>Typ ćwiczenia:</label>
+    <div class="form-check">
+        <input class="form-check-input" type="radio" name="type" id="ex_type1" value="n" checked>
+        <label class="form-check-label" for="ex_type1">
+            Na czas
+        </label>
+        </div>
+        <div class="form-check">
+        <input class="form-check-input" type="radio" name="type" id="ex_type2" value="y">
+        <label class="form-check-label" for="ex_type2">
+            Na ilość powtórzeń
+        </label>
+    </div>
+</div>
+<div class="form-group">
+    <label for="video">Instruktaż:</label>
+    <br>
+    <input type="file" class="form-control-file" id="video" name="video" accept="video/mp4">
+</div>
+<div class="form-group">
+    <label class="with-icon"><span class='material-symbols-outlined add-circle' subform-id="equip_creator">add_circle</span> Wymagany sprzęt:</label>
+    <div class="container panel-container">
+    <div class="row" id="exercise-equipment">
+    <% if(it.equipment) {%>
+    <% it.equipment.forEach((e) => { %>
+    <div class="col-2 panel">
+        <input class="form-check-input d-none" type="checkbox" name="equipment-<%=encodeURI(e[0])%>" id="<%=encodeURI(e[0])%>">
+        <label class="form-check-label" for="<%=encodeURI(e[0])%>">
+            <div class="selected"></div>
+            <% if(e[1] == 'T') {%>
+            <img src="/files/equipment/<%= e[0] %>.png" onerror="this.style.display='none';">
+            <% } %>
+            <p class="equip-name"><%= e[0] %></p>
+        </label>
+    </div>
+    <% }) %>
+    <% } %>
+    </div>
+    </div>
+</div>
