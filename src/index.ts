@@ -4,7 +4,7 @@ import { getPool } from './db';
 import { init } from './init';
 import { copyFile } from 'fs';
 import session from 'express-session';
-import { OUT_FORMAT_ARRAY, OUT_FORMAT_OBJECT } from 'oracledb';
+import { BIND_OUT, NUMBER, OUT_FORMAT_ARRAY, OUT_FORMAT_OBJECT } from 'oracledb';
 import fileUpload, { UploadedFile } from 'express-fileupload';
 import path from 'path';
 import { traceDeprecation } from 'process';
@@ -13,22 +13,17 @@ function padTo2Digits(num: number) {
   return num.toString().padStart(2, '0');
 }
 
-function translateDaysOfWeek(value: string){
-  value = value.toUpperCase();
-  if(value === 'PN') return 'Poniedziałek';
-  else if(value === 'WT') return 'Wtorek';
-  else if(value === 'SR') return 'Środa';
-  else if(value === 'CZ') return 'Czwartek';
-  else if(value === 'PT') return 'Piątek';
-  else if(value === 'SB') return 'Sobota';
-  else if(value === 'ND') return 'Niedziela';
-  else return "?";
-}
-
 function translateNumberToHour(value: number){
   var minutes = value % 60;
   var hours = (value-minutes)/60;
   return `${padTo2Digits(hours)}:${padTo2Digits(minutes)}`
+}
+
+function translateHourToNumber(value: string){
+  var parts = value.split(':');
+  var hours = parseInt(parts[0])
+  var minutes = parseInt(parts[1])
+  return hours*60+minutes
 }
 
 function formatDate(date = new Date()) {
@@ -47,6 +42,8 @@ const getExtension = (filename: string) => {
   const re = /(?:\.([^.]+))?$/;
   return re.exec(filename)![1];
 }
+
+const daysOfWeek = ['PN', 'WT', 'SR', 'CZ', 'PT', 'SB', 'ND'];
 
 const bootstrap = async () => {
   init();
@@ -97,7 +94,15 @@ const bootstrap = async () => {
   });
 
   app.get('/created/:what', checkLoggedIn, (req: Request, res: Response) => {
-    res.render('created', {
+    res.render('info', {
+      info: 'Dodano',
+      what: req.params.what
+    })
+  });
+
+  app.get('/modified/:what', checkLoggedIn, (req: Request, res: Response) => {
+    res.render('info', {
+      info: 'Zmieniono',
       what: req.params.what
     })
   });
@@ -158,8 +163,42 @@ const bootstrap = async () => {
     res.render("equipment_creator", {});
   });
 
-  app.get('/training-plan-creator/new-:training', checkLoggedIn, (req: Request, res: Response) => {
-    res.render('training_plan_creator', {})
+  app.get('/training-plan-creator/new-:training', checkLoggedIn, async (req: Request, res: Response) => {
+    let pool, connection, result;
+    try{
+      pool = await getPool();
+      connection = await pool.getConnection();
+      result = (await connection.execute(`SELECT czy_prywatny, uzytkownicy_login FROM treningi WHERE nazwa=:nazwa`, [req.params.training], { outFormat: OUT_FORMAT_OBJECT } )).rows;
+
+      if(result){
+        if(result.length === 0){
+          res.render('error', {
+            msg: 'Taki trening nie istnieje.'
+          })
+        }else{
+          const data = result[0] as {
+            CZY_PRYWATNY: string,
+            UZYTKOWNICY_LOGIN: string
+          };
+          if(data.UZYTKOWNICY_LOGIN !== req.session.username && data.CZY_PRYWATNY === 'T'){
+            res.render('error', {
+              msg: 'Niestety ten trening nie należy do ciebie i jest prywatny.'
+            })
+          }else{
+            res.render('training_plan_creator', {})
+          }
+        }
+          
+      }else res.status(500)
+    }catch(err){
+      console.error(err);
+      res.status(500);  
+      res.send('Błąd wewnętrzny')       
+        
+    }finally{
+      await connection?.close();
+      await pool?.close();
+    }
   });
 
   app.get('/training-plan-creator/modify-:id', checkLoggedIn, async (req: Request, res: Response) => {
@@ -176,7 +215,7 @@ const bootstrap = async () => {
           })
         }else{
           const data = result[0] as {
-            DATA_ZAKONCZENIA: Date,
+            DATA_ZAKONCZENIA: Date|null,
             UZYTKOWNICY_LOGIN: string
           };
           if(data.UZYTKOWNICY_LOGIN !== req.session.username){
@@ -184,13 +223,12 @@ const bootstrap = async () => {
               msg: 'Niestety ten plan treningowy nie należy do ciebie.\nDlatego nie możesz go modyfikować.'
             })
           }else{
-            if(data.DATA_ZAKONCZENIA < (new Date())){
+            if(data.DATA_ZAKONCZENIA !== null && data.DATA_ZAKONCZENIA < (new Date())){
               res.render('error', {
                 msg: 'Niestety ten plan treningowy jest już zakończony.\nDlatego nie możesz go modyfikować.\nProponujemy stworzyć nowy.'
               })
             }else{
               result = (await connection.execute(`SELECT dzien_tygodnia, godzina, dzien_tyg_przypomnienia, godz_przypomnienia FROM DNITRENINGOWE WHERE PLANTRENINGOWY_ID=:id`, [req.params.id], { outFormat: OUT_FORMAT_OBJECT } )).rows;
-              
               if(result){
                 const days = result as {
                   DZIEN_TYGODNIA: string,
@@ -200,13 +238,13 @@ const bootstrap = async () => {
                 }[];
                 res.render('training_plan_creator', {
                   days: days.map((element) => [
-                    translateDaysOfWeek(element.DZIEN_TYGODNIA),
+                    element.DZIEN_TYGODNIA,
                     translateNumberToHour(element.GODZINA),
                     element.DZIEN_TYG_PRZYPOMNIENIA !== null && element.GODZ_PRZYPOMNIENIA !== null,
-                    element.DZIEN_TYG_PRZYPOMNIENIA == null ? undefined : translateDaysOfWeek(element.DZIEN_TYG_PRZYPOMNIENIA ),
+                    element.DZIEN_TYG_PRZYPOMNIENIA == null ? undefined : element.DZIEN_TYG_PRZYPOMNIENIA,
                     element.GODZ_PRZYPOMNIENIA === null ? undefined : translateNumberToHour(element.GODZ_PRZYPOMNIENIA ),
                   ]),
-                  end: formatDate(data.DATA_ZAKONCZENIA)
+                  end: data.DATA_ZAKONCZENIA === null ? undefined : formatDate(data.DATA_ZAKONCZENIA)
                 })
               }else res.status(500)
             }
@@ -739,6 +777,237 @@ const bootstrap = async () => {
     }
   });
 
+  app.post('/training-plan-creator/new-:training', checkLoggedIn, async (req: Request, res: Response) => {
+    
+    let pool, connection, result;
+    try{
+      pool = await getPool();
+      connection = await pool.getConnection();
+      result = (await connection.execute(`SELECT czy_prywatny, uzytkownicy_login FROM treningi WHERE nazwa=:nazwa`, [req.params.training], { outFormat: OUT_FORMAT_OBJECT } )).rows;
+
+      if(result){
+        if(result.length === 0){
+          res.render('error', {
+            msg: 'Taki trening nie istnieje.'
+          })
+        }else{
+          const data = result[0] as {
+            CZY_PRYWATNY: string,
+            UZYTKOWNICY_LOGIN: string
+          };
+          if(data.UZYTKOWNICY_LOGIN !== req.session.username && data.CZY_PRYWATNY === 'T'){
+            res.render('error', {
+              msg: 'Niestety ten trening nie należy do ciebie i jest prywatny.'
+            })
+          }else{
+            var error = false;
+            var end = null;
+            if(req.body.end && req.body.end.length > 0){
+              if(/[0-9]{4}-[0-9]{2}-[0-9]{2}/.test(req.body.end)){
+                var dt = Date.parse(req.body.end);
+                if(isNaN(dt)){
+                  res.render('error', {
+                    msg: 'Niepoprawna data zakończenia.'
+                  })
+                  error = true;
+                }else{
+                  end = new Date(dt);
+                  if(end < (new Date())){
+                    res.render('error', {
+                      msg: 'Podano zbyt wczesną datę.'
+                    })
+                    error = true;
+                  }
+                }
+              }else{
+                res.render('error', {
+                  msg: 'Niepoprawny format daty.'
+                })
+                error = true;
+              }
+            }
+            if(!error){
+              result = await connection.execute(`INSERT INTO plantreningowy (data_zakonczenia, uzytkownicy_login, treningi_nazwa) VALUES (:end, :login, :nazwa) RETURNING id INTO :id`, [end, req.session.username, req.params.training, { type: NUMBER, dir: BIND_OUT },
+              ], {autoCommit: false})
+              if(result){
+                if(result.outBinds){
+                  var id = (result.outBinds as number[][])[0][0];
+                  if(req.body.days){
+                    var keys: {
+                      dow: string,
+                      hour: number
+                    }[] = [];
+                    for(const day of req.body.days){
+                      let hour = translateHourToNumber(day.hour);
+                      let nhour = day.nhour ? translateHourToNumber(day.nhour) : undefined;
+                      if(!daysOfWeek.includes(day.dow) || hour > 1440 || (day.ndow !== undefined && !daysOfWeek.includes(day.ndow)) || (nhour !== undefined && nhour > 1440)){
+                        error = true;
+                        res.render('error', {
+                          msg: 'Niepoprawny dzień treningowy.'
+                        })
+                        break;
+
+                      }
+                      if(keys.every((val) => {
+                        if(val.dow === day.dow && val.hour === hour){
+                          return false;
+                        }
+                        return true;
+                      })){
+                        keys.push({
+                          dow: day.dow,
+                          hour: hour
+                        })
+                        await connection.execute(`INSERT INTO dnitreningowe (dzien_tygodnia, godzina, dzien_tyg_przypomnienia, godz_przypomnienia, plantreningowy_id) VALUES (:1, :2, :3, :4, :5)`, [
+                          day.dow, hour, day.ndow, nhour, id
+                        ], {autoCommit: false})
+                      }else{
+                        error = true;
+                        res.render('error', {
+                          msg: 'Zduplikowany dzień treningowy.'
+                        })
+                        break;
+                      }
+                      
+                    }
+                  }
+                  if(!error){
+                    await connection.commit();
+                    res.redirect('/created/plan treningowy')
+                  }
+                }else res.status(500)
+              }else res.status(500)
+            }
+          }
+        }
+          
+      }else res.status(500)
+    }catch(err){
+      console.error(err);
+      res.status(500);  
+      res.send('Błąd wewnętrzny')       
+    }finally{
+      await connection?.close();
+      await pool?.close();
+    }
+  });
+  
+  app.post('/training-plan-creator/modify-:id', checkLoggedIn, async (req: Request, res: Response) => {
+    let pool, connection, result;
+    try{
+      pool = await getPool();
+      connection = await pool.getConnection();
+      result = (await connection.execute(`SELECT data_zakonczenia, uzytkownicy_login FROM plantreningowy WHERE id=:id`, [req.params.id], { outFormat: OUT_FORMAT_OBJECT } )).rows;
+
+      if(result){
+        if(result.length === 0){
+          res.render('error', {
+            msg: 'Taki plan treningowy nie istnieje.\nMożliwe, że został usunięty niedawno w równoległej sesji.'
+          })
+        }else{
+          const data = result[0] as {
+            DATA_ZAKONCZENIA: Date|null,
+            UZYTKOWNICY_LOGIN: string
+          };
+          if(data.UZYTKOWNICY_LOGIN !== req.session.username){
+            res.render('error', {
+              msg: 'Niestety ten plan treningowy nie należy do ciebie.\nDlatego nie możesz go modyfikować.'
+            })
+          }else{
+            if(data.DATA_ZAKONCZENIA !== null && data.DATA_ZAKONCZENIA < (new Date())){
+              res.render('error', {
+                msg: 'Niestety ten plan treningowy jest już zakończony.\nDlatego nie możesz go modyfikować.\nProponujemy stworzyć nowy.'
+              })
+            }else{
+              result = (await connection.execute(`DELETE FROM DNITRENINGOWE WHERE PLANTRENINGOWY_ID=:id`, [req.params.id], { autoCommit: false } )).rows;
+              
+              var error = false;
+              var end = null;
+              if(req.body.end && req.body.end.length > 0){
+                if(/[0-9]{4}-[0-9]{2}-[0-9]{2}/.test(req.body.end)){
+                  var dt = Date.parse(req.body.end);
+                  if(isNaN(dt)){
+                    res.render('error', {
+                      msg: 'Niepoprawna data zakończenia.'
+                    })
+                    error = true;
+                  }else{
+                    end = new Date(dt);
+                    if(end < (new Date())){
+                      res.render('error', {
+                        msg: 'Podano zbyt wczesną datę.'
+                      })
+                      error = true;
+                    }
+                  }
+                }else{
+                  res.render('error', {
+                    msg: 'Niepoprawny format daty.'
+                  })
+                  error = true;
+                }
+              }
+              if(!error){
+                result = await connection.execute(`UPDATE plantreningowy SET data_zakonczenia=:end WHERE id=:id`, [end, req.params.id], {autoCommit: false})
+                if(req.body.days){
+                  var keys: {
+                    dow: string,
+                    hour: number
+                  }[] = [];
+                  for(const day of req.body.days){
+                    let hour = translateHourToNumber(day.hour);
+                    let nhour = day.nhour ? translateHourToNumber(day.nhour) : undefined;
+                    if(!daysOfWeek.includes(day.dow) || hour > 1440 || (day.ndow !== undefined && !daysOfWeek.includes(day.ndow)) || (nhour !== undefined && nhour > 1440)){
+                      error = true;
+                      res.render('error', {
+                        msg: 'Niepoprawny dzień treningowy.'
+                      })
+                      break;
+
+                    }
+                    if(keys.every((val) => {
+                      if(val.dow === day.dow && val.hour === hour){
+                        return false;
+                      }
+                      return true;
+                    })){
+                      keys.push({
+                        dow: day.dow,
+                        hour: hour
+                      })
+                      await connection.execute(`INSERT INTO dnitreningowe (dzien_tygodnia, godzina, dzien_tyg_przypomnienia, godz_przypomnienia, plantreningowy_id) VALUES (:1, :2, :3, :4, :5)`, [
+                        day.dow, hour, day.ndow, nhour, req.params.id
+                      ], {autoCommit: false})
+                    }else{
+                      error = true;
+                      res.render('error', {
+                        msg: 'Zduplikowany dzień treningowy.'
+                      })
+                      break;
+                    }
+                    
+                  }
+                }
+                if(!error){
+                  await connection.commit();
+                  res.redirect('/modified/plan treningowy')
+                }
+              }
+            }
+          }
+        }
+          
+      }else res.status(500)
+    }catch(err){
+      console.error(err);
+      res.status(500);  
+      res.send('Błąd wewnętrzny')       
+    }finally{
+      await connection?.close();
+      await pool?.close();
+    }
+  });
+
   app.post('/training-panel', checkLoggedIn, async (req: Request, res: Response) => {
     const trainingName = req.body.trainingName;
     const trainingAuthor = req.body.trainingAuthor;
@@ -760,7 +1029,7 @@ const bootstrap = async () => {
       await pool?.close();
     }
   });
-
+  
   app.post('/exercise-panel', checkLoggedIn, async (req: Request, res: Response) => {
     const exerciseName = req.body.exerciseName;
     const username = req.session.username;
