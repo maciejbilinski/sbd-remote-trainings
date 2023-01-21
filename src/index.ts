@@ -7,6 +7,7 @@ import session from 'express-session';
 import { OUT_FORMAT_ARRAY, OUT_FORMAT_OBJECT } from 'oracledb';
 import fileUpload, { UploadedFile } from 'express-fileupload';
 import path from 'path';
+import { traceDeprecation } from 'process';
 
 function padTo2Digits(num: number) {
   return num.toString().padStart(2, '0');
@@ -224,9 +225,52 @@ const bootstrap = async () => {
     }
   });
 
-  app.get('/training-search', checkLoggedIn, (req: Request, res: Response) => {
-    res.send('Wyszukiwarka treningów');
+  app.get('/training-search', checkLoggedIn, async (req: Request, res: Response) => {
+    const username = req.session.username;
+    let pool, connection, result;
+    try {
+      pool = await getPool();
+      connection = await pool.getConnection();
+      result = (await connection.execute(`SELECT * FROM treningi WHERE czy_prywatny='N' OR uzytkownicy_login=:login`, [username], { outFormat: OUT_FORMAT_ARRAY })).rows;
+      if (result) {
+        res.render('training-search', { username: req.session.username, table: result });
+      }
+    } catch (err) {
+      console.error(err);
+      res.status(500);
+    } finally {
+      await connection?.close();
+      await pool?.close();
+    }
   });
+
+  app.get('/training-panel', checkLoggedIn, async (req: Request, res: Response) => {
+    const trainingName = req.query.name;
+    const trainingAuthor = req.query.author;
+    const username = req.session.username;
+    let pool, connection, result;
+    try {
+      pool = await getPool();
+      connection = await pool.getConnection();
+      result = (await connection.execute(`SELECT COUNT(*) AS n FROM treningi WHERE nazwa=:nazwa AND uzytkownicy_login=:login AND (czy_prywatny='N' OR uzytkownicy_login=:userlogin)`, [trainingName, trainingAuthor, username], { outFormat: OUT_FORMAT_OBJECT })).rows;
+      if (result) {
+        if (result[0]) {
+          if ((result[0] as { N: number }).N === 1) {
+            res.render('training-panel', { username: username, trainingName: trainingName, trainingAuthor: trainingAuthor});
+          } else {
+            res.redirect('/');
+          }
+        }
+      }
+    } catch (err) {
+      console.error(err);
+      res.status(500);
+    } finally {
+      await connection?.close();
+      await pool?.close();
+    }
+  });
+
 
   app.get('/exercise-search', checkLoggedIn, (req: Request, res: Response) => {
     res.send('Wyszukiwarka ćwiczeń');
@@ -249,7 +293,7 @@ const bootstrap = async () => {
         result = (await connection.execute(`SELECT preferowana_jednostka FROM uzytkownicy WHERE login=:login`, [username], { outFormat: OUT_FORMAT_OBJECT })).rows;
         if (result) {
           if (result[0]) {
-            res.render('account-settings', { username: req.session.username, unit: (result[0] as { PREFEROWANA_JEDNOSTKA: string }).PREFEROWANA_JEDNOSTKA, unitCorrectlyChanged: false });
+            res.render('account-settings', { username: req.session.username, unit: (result[0] as { PREFEROWANA_JEDNOSTKA: string }).PREFEROWANA_JEDNOSTKA});
           }
         }
       } catch (err) {
@@ -263,7 +307,7 @@ const bootstrap = async () => {
   });
 
   app.get('/delete-account', checkLoggedIn, (req: Request, res: Response) => {
-    res.render('delete-account', {username: req.session.username, incorrectTypedUsername: false});
+    res.render('delete-account', {username: req.session.username});
   });
 
   // Handle logout

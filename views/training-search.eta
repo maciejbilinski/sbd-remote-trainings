@@ -1,0 +1,42 @@
+<% layout('./layout', {styles: ['welcome', 'cockpit'], scripts: ['search']}) %>
+<section class="content" data-bs-theme="dark">
+    <div class="sub-options">
+        <a href="/">
+            <div class="flex-option">
+                <span class="material-symbols-outlined">arrow_back</span><span>Powrót do kokpitu</span>
+            </div>
+        </a>
+    </div>
+    <h1>Wyszukiwarka treningów</h1>
+    <p>Tutaj możesz wyszukać wszystkie publiczne treningi innych użytkowników.</p>
+    <p>Dostępne są również wszystkie Twoje treningi. Prywatne treningi oznaczone są <i>pochyloną czcionką</i>.</p>
+    <div class="d-flex">
+        <input type="text" placeholder="Nazwa treningu" class="form-control" id="search-box"><!--<input type="button" class="btn btn-primary" value="Filtruj" id="search-button">-->
+    </div>
+    <br>
+    <div class="form-container">
+        <table class="table table-dark table-bordered table-hover">
+            <thead>
+                <tr>
+                    <th scope="col">#</th>
+                    <th scope="col">Nazwa treningu</th>
+                    <th scope="col">Autor</th>
+                </tr> 
+            </thead>
+            <tbody>
+                <% if(it.table) {%>
+                <% it.table.forEach((col, n) => { %>
+                    <tr>
+                        <td><%= n+1 %></td>
+                        <td class="td-name">
+                            <a href="training-panel?name=<%= col[0] %>&author=<%= col[2] %>" class="training-link" style="text-decoration:none; color:inherit;">
+                            <% if (col[1] === 'T') { %><i><% } %><%= col[0] %><% if (col[1] === 'T' ) { %></i><% } %>
+                            </a>
+                        </td>
+                        <td><%= col[2] %></td>
+                    </tr>
+                <% })} %>
+            </tbody>
+        </table>
+    </div>
+</section>
