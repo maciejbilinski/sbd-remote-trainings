@@ -272,16 +272,52 @@ const bootstrap = async () => {
   });
 
 
-  app.get('/exercise-search', checkLoggedIn, (req: Request, res: Response) => {
-    res.send('Wyszukiwarka ćwiczeń');
+  app.get('/exercise-search', checkLoggedIn, async (req: Request, res: Response) => {
+    let pool, connection, result;
+    try {
+      pool = await getPool();
+      connection = await pool.getConnection();
+      result = (await connection.execute(`SELECT * FROM cwiczenia`, [], { outFormat: OUT_FORMAT_ARRAY })).rows;
+      if (result) {
+        res.render('exercise-search', { table: result });
+      }
+    } catch (err) {
+      console.error(err);
+      res.status(500);
+    } finally {
+      await connection?.close();
+      await pool?.close();
+    }
+  });
+
+  app.get('/exercise-panel', checkLoggedIn, (req: Request, res: Response) => {
+    res.send('Nazwa ćwiczenia: ' + req.query.name);
   });
 
   app.get('/training-plans', checkLoggedIn, (req: Request, res: Response) => {
     res.send('Plany treningowe użytkownika');
   });
 
-  app.get('/equipment-search', checkLoggedIn, (req: Request, res: Response) => {
-    res.send('Wyszukiwarka sprzętu');
+  app.get('/equipment-search', checkLoggedIn, async (req: Request, res: Response) => {
+    let pool, connection, result;
+    try {
+      pool = await getPool();
+      connection = await pool.getConnection();
+      result = (await connection.execute(`SELECT * FROM sprzet`, [], { outFormat: OUT_FORMAT_ARRAY })).rows;
+      if (result) {
+        res.render('equipment-search', { table: result });
+      }
+    } catch (err) {
+      console.error(err);
+      res.status(500);
+    } finally {
+      await connection?.close();
+      await pool?.close();
+    }
+  });
+
+  app.get('/equipment-panel', checkLoggedIn, (req: Request, res: Response) => {
+    res.send('Nazwa sprzętu: ' + req.query.name);
   });
 
   app.get('/account-settings', checkLoggedIn, async (req: Request, res: Response) => {
