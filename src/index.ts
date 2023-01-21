@@ -248,7 +248,7 @@ const bootstrap = async () => {
     const trainingName = req.query.name;
     const trainingAuthor = req.query.author;
     const username = req.session.username;
-    let pool, connection, result;
+    let pool, connection, result, result2;
     try {
       pool = await getPool();
       connection = await pool.getConnection();
@@ -256,7 +256,15 @@ const bootstrap = async () => {
       if (result) {
         if (result[0]) {
           if ((result[0] as { N: number }).N === 1) {
-            res.render('training-panel', { username: username, trainingName: trainingName, trainingAuthor: trainingAuthor});
+            // result2 = (await connection.execute(`SELECT skutecznosc, trudnosc, intensywnosc FROM ocenytreningow WHERE nazwa=:nazwa AND uzytkownicy_login=:login`, [trainingName, username], { outFormat: OUT_FORMAT_OBJECT})).rows;
+            // if (result2) {
+            //   if (result2[0]) {
+            //     res.render('training-panel', { username: username, trainingName: trainingName, trainingAuthor: trainingAuthor});
+            //   }
+            // } else {
+              res.render('training-panel', { username: username, trainingName: trainingName, trainingAuthor: trainingAuthor});
+            // }
+            
           } else {
             res.redirect('/');
           }
@@ -706,6 +714,28 @@ const bootstrap = async () => {
       res.json({
         error: "Nie wypełniono obowiązkowych pól!" + JSON.stringify(req.body)
       });
+    }
+  });
+
+  app.post('/training-panel', checkLoggedIn, async (req: Request, res: Response) => {
+    const trainingName = req.body.trainingName;
+    const trainingAuthor = req.body.trainingAuthor;
+    const username = req.session.username;
+    const skutecznosc = req.body.skutecznosc;
+    const trudnosc = req.body.trudnosc;
+    const intensywnosc = req.body.intensywnosc;
+    let pool, connection;
+    try {
+      pool = await getPool();
+      connection = await pool.getConnection();
+      await connection.execute(`INSERT INTO ocenytreningow VALUES (:skutecznosc, :trudnosc, :intensywnosc, :login, :nazwa)`, [skutecznosc, trudnosc, intensywnosc, username, trainingName], {autoCommit: true});
+      res.render('training-panel', {username: username, trainingName: trainingName, trainingAuthor: trainingAuthor, gradeSuccess: true});
+    } catch (err) {
+      console.error(err);
+      res.status(500);
+    } finally {
+      await connection?.close();
+      await pool?.close();
     }
   });
 
