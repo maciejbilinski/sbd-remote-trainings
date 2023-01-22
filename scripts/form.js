@@ -107,4 +107,19 @@ window.addEventListener('load', function(){
             })
         }
     }
+
+    const trainingMode = document.querySelector('#training-mode-form');
+    if(trainingMode){
+        function func(e){
+            e.preventDefault();
+            return e.returnValue = 'Czy na pewno chcesz opuścić tą stronę? Masz niezapisane zmiany.';
+        }
+        window.addEventListener('beforeunload', func);
+
+        trainingMode.onAdd = function(e){
+            window.removeEventListener('beforeunload', func);
+            location.href = '/done/trening';
+        }
+        
+    }
 });

@@ -107,6 +107,13 @@ const bootstrap = async () => {
     })
   });
 
+  app.get('/done/:what', checkLoggedIn, (req: Request, res: Response) => {
+    res.render('info', {
+      info: 'Ukończono',
+      what: req.params.what
+    })
+  });
+
   app.get('/training-creator', checkLoggedIn, async (req: Request, res: Response) => {
     let pool, connection, result;
     try{
@@ -347,6 +354,95 @@ const bootstrap = async () => {
   app.get('/delete-account', checkLoggedIn, (req: Request, res: Response) => {
     res.render('delete-account', {username: req.session.username});
   });
+
+  app.get('/training-mode/:id', checkLoggedIn, async (req: Request, res: Response) => {
+    res.set('Cache-control', 'no-cache, max-age=0, must-revalidate, no-store')
+    let pool, connection, result;
+    try{
+      pool = await getPool();
+      connection = await pool.getConnection();
+      result = (await connection.execute(`
+      SELECT 
+        json_object(
+            'login' VALUE p.uzytkownicy_login, 
+            'data_zakonczenia' VALUE p.data_zakonczenia,
+            'cwiczenia' VALUE (
+                SELECT 
+                    json_arrayagg(
+                        json_object(
+                            'nazwa' VALUE ct.cwiczenia_nazwa,
+                            'ma_instruktaz' VALUE c.ma_instruktaz,
+                            'czy_powtorzeniowe' VALUE c.czy_powtorzeniowe,
+                            'sprzet' VALUE (
+                                SELECT 
+                                    json_arrayagg(
+                                        json_object(
+                                            'nazwa' VALUE cs.sprzet_nazwa,
+                                            'ma_zdjecie' VALUE s.ma_zdjecie,
+                                            'czy_rozne_obciazenie' VALUE s.czy_rozne_obciazenie
+                                        )
+                                    )
+                                FROM
+                                    cwiczeniasprzet cs JOIN sprzet s ON cs.sprzet_nazwa=s.nazwa
+                                WHERE
+                                    cs.cwiczenia_nazwa = c.nazwa
+                            )
+                        )    
+                    ) 
+                FROM 
+                    cwiczeniatreningi ct JOIN cwiczenia c ON ct.cwiczenia_nazwa = c.nazwa
+                WHERE
+                    ct.treningi_nazwa=p.treningi_nazwa)
+        )
+    FROM 
+        plantreningowy p
+    WHERE 
+        p.id = :id`, [req.params.id], { outFormat: OUT_FORMAT_ARRAY } )).rows;
+      if(result){
+          if(result[0]){
+            // '{"login":"admin","data_zakonczenia":"2050-06-06T20:49:30","cwiczenia":null}'
+            result = (result as string[][])[0]
+            if(result[0]){
+              result = JSON.parse(result[0]);
+              if(result.login !== req.session.username){
+                res.render('error', {
+                  msg: 'Ten plan treningowy nie należy do ciebie!'
+                })
+              }else{
+                var end;
+                var ok = false;
+                if(result.data_zakonczenia === null){
+                  ok = true;
+                }else{
+                  end = new Date(result.data_zakonczenia);
+                  if(end >= new Date()){
+                    ok = true;
+                  }
+                }
+
+                if(ok){
+                  res.render("training_mode", {
+                    exercises: result.cwiczenia
+                  });
+                }else{
+                  res.render("error", {
+                    msg: "Ten plan treningowy jest już zakończony"
+                  })
+                }
+              }
+            }else res.status(500)
+          }else res.status(500)
+        }else res.status(500)
+    }catch(err){
+      console.error(err);
+      res.status(500);  
+      res.send('Błąd wewnętrzny')       
+        
+    }finally{
+      await connection?.close();
+      await pool?.close();
+    }
+  })
 
   // Handle logout
   app.get('/logout', checkLoggedIn, (req: Request, res: Response) => {
