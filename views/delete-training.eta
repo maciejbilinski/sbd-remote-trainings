@@ -1,0 +1,22 @@
+<% layout('./layout', {styles: ['welcome', 'cockpit']}) %>
+<section class="content" data-bs-theme="dark">
+    <% if (it.incorrectTypedTrainingName) { %> <div class="alert alert-danger" role="alert">Niepoprawna nazwa treningu!</div> <% } %>
+    <div class="sub-options">
+        <a href="/user-trainings">
+            <div class="flex-option">
+                <span class="material-symbols-outlined">arrow_back</span><span>Powrót</span>
+            </div>
+        </a>
+    </div>
+    <h1>Czy na pewno chcesz usunąć trening o nazwie <b><%= it.trainingName %></b>?</h1>
+    <p>Wpisz w poniższe pole nazwę treningu, aby potwierdzić jego usunięcie.</p>
+    <p style="font-weight:bold;">Tej operacji nie można cofnąć.</p>
+    <p>Nazwa treningu: <span style="font-weight:bold;"><%~ it.trainingName %></span></p>
+    <div class="form-container">
+    <form action="/delete-training" method="POST">
+        <input type="hidden" name="actual_training_name" value="<%= it.trainingName %>">
+        <input type="text" class="form-control" name="typed_training_name"><br>
+        <input type="submit" class="btn btn-danger" value="Usuń trening">
+    </form>
+    </div>
+</section>

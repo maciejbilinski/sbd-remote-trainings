@@ -4,11 +4,19 @@
         <div class="alert alert-success" role="alert">Pomyślnie oceniono trening.</div>
         <% } %>
     <div class="sub-options">
+    <% if (!it.fromUserTrainings) { %>
         <a href="/training-search">
             <div class="flex-option">
                 <span class="material-symbols-outlined">arrow_back</span><span>Powrót do wyszukiwarki</span>
             </div>
         </a>
+    <% } else { %>
+        <a href="/user-trainings">
+            <div class="flex-option">
+                <span class="material-symbols-outlined">arrow_back</span><span>Powrót do Twoich treningów</span>
+            </div>
+        </a>
+    <% } %>
     </div>
     <h1><% =it.trainingName %></h1>
     <h2>Autor treningu: <% =it.trainingAuthor %></h2>
