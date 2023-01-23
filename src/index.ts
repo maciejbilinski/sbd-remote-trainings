@@ -1000,13 +1000,12 @@ const bootstrap = async () => {
       console.error(err);
       res.status(500);  
       res.send('Błąd wewnętrzny')       
-        
     }finally{
       await connection?.close();
       await pool?.close();
     }
   });
-
+  
   app.post('/training-plan-creator/modify-:id', checkLoggedIn, async (req: Request, res: Response) => {
     let pool, connection, result;
     try{
@@ -1117,7 +1116,6 @@ const bootstrap = async () => {
       console.error(err);
       res.status(500);  
       res.send('Błąd wewnętrzny')       
-        
     }finally{
       await connection?.close();
       await pool?.close();
@@ -1290,30 +1288,7 @@ const bootstrap = async () => {
                     ok = true;
                   }
                 }
-
-                /*
-                [
-[1]   {
-[1]     nazwa: 'Dziwny sprzęt',
-[1]     ma_instruktaz: 'N',
-[1]     czy_powtorzeniowe: 'T',
-[1]     sprzet: null
-[1]   },
-[1]   {
-[1]     nazwa: 'Dodaje sprzecior',
-[1]     ma_instruktaz: 'N',
-[1]     czy_powtorzeniowe: 'N',
-[1]     sprzet: null
-[1]   },
-[1]   {
-[1]     nazwa: 'Hihi',
-[1]     ma_instruktaz: 'T',
-[1]     czy_powtorzeniowe: 'N',
-[1]     sprzet: [ [Object] ]
-[1]   }
-[1] ]
-
-*/
+                
                 if(ok){
                   result2 = await connection.execute('INSERT INTO wykonanetreningi (data_rozpoczecia, data_zakonczenia, ocena_zmeczenia, plantreningowy_id) VALUES (:1, :2, :3, :4) RETURNING id INTO :id', [
                     new Date(startDate), new Date(), rating, req.params.id, { type: NUMBER, dir: BIND_OUT }
