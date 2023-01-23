@@ -2,6 +2,11 @@
 <section class="content" data-bs-theme="dark">
     <h1>Witaj <span class='regular'><%~ it.username %></span>!</h1>
     <div class="options">
+        <a href="user-trainings">
+            <div class="flex-option">
+                <span class="material-symbols-outlined">fitness_center</span><span>Twoje treningi</span>
+            </div>
+        </a>
         <a href="account-settings">
             <div class="flex-option">
                 <span class="material-symbols-outlined">settings_suggest</span><span>Personalizacja konta</span>
@@ -17,10 +22,10 @@
         <div class="row">
             <div class="col-3"></div>
             <div class="col-6">
-                <a href="training-plans">
+                <a href="user-training-plans">
                     <div class="card">
                         <div class="card-body">
-                            <h5 class="card-title">Plany treningowe</h5>
+                            <h5 class="card-title">Twoje plany treningowe</h5>
                             <span class="material-symbols-outlined">date_range</span>
                         </div>
                     </div>
