@@ -38,7 +38,7 @@ window.addEventListener('load', function(){
                 lbl.innerText = 'Ilość powtórzeń';
                 input.min = 0;
                 input.required = true;
-                input.name = `amount[${btn.getAttribute('ex')}][${n}]`;
+                input.name = `exercises+${btn.getAttribute('ex')}+${n}+amount`;
                 detailsContent.appendChild(lbl);
                 detailsContent.appendChild(input);
             }else{
@@ -53,7 +53,7 @@ window.addEventListener('load', function(){
                 timer.appendChild(timerText);
                 timerText.time = 0;
                 const timerInput = document.createElement('input');
-                timerInput.name = `time[${btn.getAttribute('ex')}][${n}]`;
+                timerInput.name = `exercises+${btn.getAttribute('ex')}+${n}+time`;
                 timerInput.style.width = 0;
                 timerInput.style.opacity = 0;
                 timerInput.style.float = 'left';
@@ -93,7 +93,8 @@ window.addEventListener('load', function(){
                         eqInput.type = 'number';
                         eqInput.min = 0;
                         eqInput.required = true;
-                        eqInput.name = `weight[${btn.getAttribute('ex')}][${encodeURI(equip.nazwa)}][${n}]`;
+                        eqInput.name = `exercises+${btn.getAttribute('ex')}+${n}+weight+${encodeURI(equip.nazwa)}`;
+
                         detailsContent.appendChild(lbl);
                         detailsContent.appendChild(eqInput);
                     }

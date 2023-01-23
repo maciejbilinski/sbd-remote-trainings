@@ -8,6 +8,7 @@ const exercisesData = JSON.parse('<%~ JSON.stringify(it.exercises) %>');
     </h1>
     <div class="full">
         <form method="POST" ajax-form id="training-mode-form">
+            <input type="hidden" name="startDate" value="<%= (new Date()).getTime()%>">
             <% if(it.exercises) {%>
             <div class="exercises">
             <h2>Ćwiczenia:</h2>
@@ -49,7 +50,7 @@ const exercisesData = JSON.parse('<%~ JSON.stringify(it.exercises) %>');
             <% } %>
             <div class="form-group" style="margin: 10px 0;">
                 <h2><sup class="red">*</sup>Ocena zmęczenia:</h2>
-                <input type="text" id="rating" required>
+                <input type="text" id="rating" name="rating" required>
                 <span class="material-symbols-outlined star" n="1">star</span>
                 <span class="material-symbols-outlined star" n="2">star</span>
                 <span class="material-symbols-outlined star" n="3">star</span>
