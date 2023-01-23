@@ -611,26 +611,21 @@ const bootstrap = async () => {
     }
   });
 
-  // TODO: deleting doesn't work due to integrity constraints
-  // and somehow can't delete from ocenytreningow
   app.post('/delete-training', checkLoggedIn, async (req: Request, res: Response) => {
-    const username = req.body.username;
+    const username = req.session.username;
     const typedTrainingName = req.body.typed_training_name;
     const actualTrainingName = req.body.actual_training_name;
     if (typedTrainingName !== actualTrainingName) {
       res.render('delete-training', { username: username, trainingName: actualTrainingName, incorrectTypedTrainingName: true });
     } else {
-      let pool, connection, result, result2;
+      let pool, connection;
       try {
         pool = await getPool();
         connection = await pool.getConnection();
-        result = (await connection.execute(`DELETE FROM ocenytreningow WHERE uzytkownicy_login=:login AND treningi_nazwa=:nazwa`, [username, actualTrainingName], {autoCommit:true}));
-        if (result) {
-          result2 = (await connection.execute(`DELETE FROM treningi WHERE nazwa=:nazwa AND uzytkownicy_login=:login`, [actualTrainingName, username], { autoCommit: true }));
-          if (result2) {
-            res.redirect('/user-trainings');
-          }
-        }
+        await connection.execute(`DELETE FROM ocenytreningow WHERE uzytkownicy_login=:login AND treningi_nazwa=:nazwa`, [username, actualTrainingName], {autoCommit: false});
+        await connection.execute(`DELETE FROM treningi WHERE nazwa=:nazwa AND uzytkownicy_login=:login`, [actualTrainingName, username], { autoCommit: false });
+        await connection.commit();
+        res.redirect('/user-trainings');
       } catch (err) {
         console.error(err);
         res.status(500);
