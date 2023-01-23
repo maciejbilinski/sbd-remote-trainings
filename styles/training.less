@@ -1,0 +1,95 @@
+main{
+    min-width: 100vw;
+    min-height: 100vh;
+    .content{
+        min-width: 100vw;
+        min-height: 100vh;
+        .top-left{
+            width: 100%;
+            background-color: rgba(0, 0,0, 0.2);
+            padding: 10px;
+        }
+
+        .full{
+            flex: 1;
+            width: 100%;
+            padding: 10px;
+            display: flex;
+            form{
+                flex: 1;
+                flex-direction: column;
+                display: flex;
+            
+                .exercises{
+                    flex: 1;
+                
+                    .exercise{
+                        > details > summary{
+                            font-size: 1.8rem;
+                        }
+                        .details-content{
+                            background-color: rgba(0, 0, 0, 0.1);
+                            padding: 10px;
+                            &.series{
+                                display: flex;
+                                gap: 5px;
+                                flex-direction: column;
+                                align-items: flex-start;
+                            }
+
+                            .equipment{
+                                display: flex;
+                                flex-wrap: wrap;
+                                justify-content: space-between;
+                                gap: 5px;
+                                .eq{
+                                    width: 192px;
+                                    height: 192px;
+                                    border: 1px solid rgba(0, 0, 0, 0.7);
+                                    position: relative;
+                                    img{
+                                        width: 100%;
+                                        height: 100%;
+                                    }
+                                    .eq-name{
+                                        width: 100%;
+                                        background-color: rgba(0, 0, 0, 0.7);
+                                        position: absolute;
+                                        bottom: 0;
+                                        left: 0;
+                                        margin: 0;
+                                        text-align: center;
+
+                                    }
+                                }
+                            }
+                        
+                            > video{
+                                width: 384px;
+                                height: 216px;
+                                background-color: rgba(0,0,0,0.1);
+                            }
+                        }
+                    }
+                }
+                #rating{
+                    opacity: 0;
+                    width: 0;
+                    float: left;
+                }
+                .star{
+                    transition: color .5s;
+                    &:hover{
+                        cursor: pointer;
+                    }
+                    &.hover:not(.clicked), &.clicked:not(.hover){
+                        color: #FFEB3B;
+                    }
+                }
+                .btn-loader{
+                    margin: 0;
+                }
+            }
+        }
+    }
+}

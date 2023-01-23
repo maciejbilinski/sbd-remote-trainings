@@ -127,7 +127,7 @@ CREATE INDEX wykonanetreningi_idx ON wykonanetreningi (plantreningowy_id);
 
 CREATE TABLE wykonanecwiczenia (
     seria               NUMBER(4, 0) NOT NULL CHECK (seria > 0),
-    wysilek             NUMBER(1, 0) NOT NULL CHECK (wysilek>=1 AND wysilek<=5),
+    wysilek             NUMBER(38) NOT NULL,
     cwiczenia_nazwa     VARCHAR2(256) NOT NULL,
     wykonanetreningi_id NUMBER(38) NOT NULL,
     id                      NUMBER(38) GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
