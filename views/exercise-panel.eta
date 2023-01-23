@@ -1,4 +1,4 @@
-<% layout('./layout', {styles: ['welcome', 'cockpit' ], scripts: ['search']}) %>
+<% layout('./layout', {styles: ['welcome', 'cockpit']}) %>
 <section class="content" data-bs-theme="dark">
     <% if (it.gradeSuccess) { %>
         <div class="alert alert-success" role="alert">Pomyślnie oceniono ćwiczenie.</div>

@@ -302,7 +302,7 @@ const bootstrap = async () => {
                 const intensywnosc = result2[0][2 as keyof typeof result2[0]];
                 res.render('training-panel', { username: username, trainingName: trainingName, trainingAuthor: trainingAuthor, skutecznosc: skutecznosc, trudnosc: trudnosc, intensywnosc: intensywnosc, wasGraded: true });
               } else {
-                  res.render('training-panel', { username: username, trainingName: trainingName, trainingAuthor: trainingAuthor });
+                res.render('training-panel', { username: username, trainingName: trainingName, trainingAuthor: trainingAuthor });
               }
             }
           } else {
@@ -357,7 +357,7 @@ const bootstrap = async () => {
                 const intensywnosc = result2[0][2 as keyof typeof result2[0]];
                 res.render('exercise-panel', { username: username, exerciseName: exerciseName, cenaSprzetu: cenaSprzetu, trudnosc: trudnosc, intensywnosc: intensywnosc, wasGraded: true });
               } else {
-                  res.render('exercise-panel', { username: username, exerciseName: exerciseName});
+                res.render('exercise-panel', { username: username, exerciseName: exerciseName});
               }
             }
           } else {
@@ -400,8 +400,36 @@ const bootstrap = async () => {
     }
   });
 
-  app.get('/equipment-panel', checkLoggedIn, (req: Request, res: Response) => {
-    res.send('Nazwa sprzętu: ' + req.query.name);
+  app.get('/equipment-panel', checkLoggedIn, async (req: Request, res: Response) => {
+    const equipmentName = req.query.name;
+    let pool, connection, result, result2;
+    try {
+      pool = await getPool();
+      connection = await pool.getConnection();
+      result = (await connection.execute(`SELECT COUNT(*) AS n FROM sprzet WHERE nazwa=:nazwa`, [equipmentName], { outFormat: OUT_FORMAT_OBJECT })).rows;
+      if (result) {
+        if (result[0]) {
+          if ((result[0] as { N: number }).N === 1) {
+            result2 = (await connection.execute(`SELECT ma_zdjecie, czy_rozne_obciazenie FROM sprzet WHERE nazwa=:nazwa`, [equipmentName], { outFormat: OUT_FORMAT_ARRAY})).rows;
+            if (result2) {
+              if (result2[0]) {
+                const hasImage = result2[0][0 as keyof typeof result2[0]];
+                const hasDifferentWeight = result2[0][1 as keyof typeof result2[0]];
+                res.render('equipment-panel', { equipmentName: equipmentName, hasImage: hasImage, hasDifferentWeight: hasDifferentWeight });
+              }
+            }
+          } else {
+            res.redirect('/');
+          }
+        }
+      }
+    } catch (err) {
+      console.error(err);
+      res.status(500);
+    } finally {
+      await connection?.close();
+      await pool?.close();
+    }
   });
 
   app.get('/account-settings', checkLoggedIn, async (req: Request, res: Response) => {
