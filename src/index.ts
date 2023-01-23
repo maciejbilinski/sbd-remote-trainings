@@ -294,15 +294,17 @@ const bootstrap = async () => {
       if (result) {
         if (result[0]) {
           if ((result[0] as { N: number }).N === 1) {
-            // result2 = (await connection.execute(`SELECT skutecznosc, trudnosc, intensywnosc FROM ocenytreningow WHERE nazwa=:nazwa AND uzytkownicy_login=:login`, [trainingName, username], { outFormat: OUT_FORMAT_OBJECT})).rows;
-            // if (result2) {
-            //   if (result2[0]) {
-            //     res.render('training-panel', { username: username, trainingName: trainingName, trainingAuthor: trainingAuthor});
-            //   }
-            // } else {
-              res.render('training-panel', { username: username, trainingName: trainingName, trainingAuthor: trainingAuthor});
-            // }
-            
+            result2 = (await connection.execute(`SELECT skutecznosc, trudnosc, intensywnosc FROM ocenytreningow WHERE treningi_nazwa=:nazwa AND uzytkownicy_login=:login AND (SELECT COUNT(*) FROM ocenytreningow WHERE treningi_nazwa=:nazwa AND uzytkownicy_login=:login) = 1`, [trainingName, username], { outFormat: OUT_FORMAT_ARRAY })).rows;
+            if (result2) {
+              if (result2[0]) {
+                const skutecznosc = result2[0][0 as keyof typeof result2[0]];
+                const trudnosc = result2[0][1 as keyof typeof result2[0]];
+                const intensywnosc = result2[0][2 as keyof typeof result2[0]];
+                res.render('training-panel', { username: username, trainingName: trainingName, trainingAuthor: trainingAuthor, skutecznosc: skutecznosc, trudnosc: trudnosc, intensywnosc: intensywnosc, wasGraded: true });
+              } else {
+                  res.render('training-panel', { username: username, trainingName: trainingName, trainingAuthor: trainingAuthor });
+              }
+            }
           } else {
             res.redirect('/');
           }
@@ -339,7 +341,7 @@ const bootstrap = async () => {
   app.get('/exercise-panel', checkLoggedIn, async (req: Request, res: Response) => {
     const exerciseName = req.query.name;
     const username = req.session.username;
-    let pool, connection, result;
+    let pool, connection, result, result2
     try {
       pool = await getPool();
       connection = await pool.getConnection();
@@ -347,7 +349,17 @@ const bootstrap = async () => {
       if (result) {
         if (result[0]) {
           if ((result[0] as { N: number }).N === 1) {
-            res.render('exercise-panel', { username: username, exerciseName: exerciseName});
+            result2 = (await connection.execute(`SELECT cena_sprzetu, trudnosc, intensywnosc FROM ocenycwiczen WHERE cwiczenia_nazwa=:nazwa AND uzytkownicy_login=:login AND (SELECT COUNT(*) FROM ocenycwiczen WHERE cwiczenia_nazwa=:nazwa AND uzytkownicy_login=:login) = 1`, [exerciseName, username], { outFormat: OUT_FORMAT_ARRAY })).rows;
+            if (result2) {
+              if (result2[0]) {
+                const cenaSprzetu = result2[0][0 as keyof typeof result2[0]];
+                const trudnosc = result2[0][1 as keyof typeof result2[0]];
+                const intensywnosc = result2[0][2 as keyof typeof result2[0]];
+                res.render('exercise-panel', { username: username, exerciseName: exerciseName, cenaSprzetu: cenaSprzetu, trudnosc: trudnosc, intensywnosc: intensywnosc, wasGraded: true });
+              } else {
+                  res.render('exercise-panel', { username: username, exerciseName: exerciseName});
+              }
+            }
           } else {
             res.redirect('/');
           }
@@ -1024,7 +1036,7 @@ const bootstrap = async () => {
       pool = await getPool();
       connection = await pool.getConnection();
       await connection.execute(`INSERT INTO ocenytreningow VALUES (:skutecznosc, :trudnosc, :intensywnosc, :login, :nazwa)`, [skutecznosc, trudnosc, intensywnosc, username, trainingName], {autoCommit: true});
-      res.render('training-panel', {username: username, trainingName: trainingName, trainingAuthor: trainingAuthor, gradeSuccess: true});
+      res.render('training-panel', {username: username, trainingName: trainingName, trainingAuthor: trainingAuthor, gradeSuccess: true, skutecznosc: skutecznosc, trudnosc: trudnosc, intensywnosc: intensywnosc, wasGraded: true});
     } catch (err) {
       console.error(err);
       res.status(500);
@@ -1045,7 +1057,7 @@ const bootstrap = async () => {
       pool = await getPool();
       connection = await pool.getConnection();
       await connection.execute(`INSERT INTO ocenycwiczen VALUES (:cenaSprzetu, :trudnosc, :intensywnosc, :login, :nazwa)`, [cenaSprzetu, trudnosc, intensywnosc, username, exerciseName], { autoCommit: true });
-      res.render('exercise-panel', { username: username, exerciseName: exerciseName, gradeSuccess: true });
+      res.render('exercise-panel', { username: username, exerciseName: exerciseName, gradeSuccess: true, cenaSprzetu: cenaSprzetu, trudnosc: trudnosc, intensywnosc: intensywnosc, wasGraded: true });
     } catch (err) {
       console.error(err);
       res.status(500);

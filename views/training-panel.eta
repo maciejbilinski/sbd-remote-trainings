@@ -21,15 +21,29 @@
                     <input type="hidden" name="trainingAuthor" value="<% =it.trainingAuthor %>">
                     <label for="skutecznosc" class="form-check-label"><sup class="red">*</sup>Skuteczność</label>
                     <input type="number" name="skutecznosc" id="skutecznosc" class="form-control" min="1" max="5" step="1"
-                        placeholder="1 — 5" required>
+                        placeholder="1 — 5" required
+                        <% if (it.wasGraded) { %>
+                            value="<%= it.skutecznosc %>" disabled="disabled"
+                        <% } %>
+                        >
                     <label for="trudnosc" class="form-check-label"><sup class="red">*</sup>Trudność</label>
                     <input type="number" name="trudnosc" id="trudnosc" class="form-control" min="1" max="5" step="1"
-                        placeholder="1 — 5" required>
+                        placeholder="1 — 5" required
+                        <% if (it.wasGraded) { %>
+                            value="<%= it.trudnosc %>" disabled="disabled"
+                        <% } %>
+                        >
                     <label for="intensywnosc" class="form-check-label"><sup class="red">*</sup>Intensywność</label>
                     <input type="number" name="intensywnosc" id="intensywnosc" class="form-control" min="1" max="5" step="1"
-                        placeholder="1 — 5" required>
+                        placeholder="1 — 5" required
+                        <% if (it.wasGraded) { %>
+                            value="<%= it.intensywnosc %>" disabled="disabled"
+                        <% } %>
+                        >
                     <br>
+                    <% if (!it.wasGraded) { %>
                     <input type="submit" value="Oceń" class="btn btn-success">
+                    <% } %>
                 </form>
             </div>
         </div>
