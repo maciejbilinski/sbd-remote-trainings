@@ -362,7 +362,11 @@ const bootstrap = async () => {
     }
   });
 
-  app.get('/training-plans', checkLoggedIn, (req: Request, res: Response) => {
+  app.get('/user-trainings', checkLoggedIn, (req: Request, res: Response) => {
+    res.send('Treningi użytkownika');
+  });
+
+  app.get('/user-training-plans', checkLoggedIn, (req: Request, res: Response) => {
     res.send('Plany treningowe użytkownika');
   });
 
