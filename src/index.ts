@@ -127,6 +127,15 @@ const getExtension = (filename: string) => {
 }
 
 const daysOfWeek = ['PN', 'WT', 'SR', 'CZ', 'PT', 'SB', 'ND'];
+const fullDaysOfWeek = {
+  'PN': 'poniedziałek',
+  'WT': 'wtorek',
+  'SR': 'środę',
+  'CZ': 'czwartek',
+  'PT': 'piątek',
+  'SB': 'sobotę',
+  'ND': 'niedzielę',
+}
 
 const bootstrap = async () => {
   init();
@@ -158,9 +167,9 @@ const bootstrap = async () => {
       req.session.save();
     }
     if(!req.session.username) {
-      res.redirect('/');
+      res.redirect('/welcome');
     } else {
-      let pool, connection, result;
+      let pool, connection, result, result2;
     try{
       pool = await getPool();
       connection = await pool.getConnection();
@@ -170,7 +179,24 @@ const bootstrap = async () => {
           result = result[0] as number[];
           if(result){
             if(result[0] === 1){
-              next();
+              result2 = (await connection.execute(`SELECT * FROM dnitreningowe WHERE dzien_tyg_przypomnienia IS NOT NULL AND godz_przypomnienia IS NOT NULL AND PLANTRENINGOWY_ID IN (SELECT id FROM plantreningowy WHERE uzytkownicy_login=:1)`, [
+                req.session.username
+              ], { outFormat: OUT_FORMAT_OBJECT })).rows;
+              if(result2){
+                (req as any).notification = {
+                  daysOfWeek: result2.map((e: any) => {
+                    return {
+                      dw: daysOfWeek.indexOf(e.DZIEN_TYG_PRZYPOMNIENIA)+1,
+                      hour: Math.floor(e.GODZ_PRZYPOMNIENIA/60),
+                      minute: e.GODZ_PRZYPOMNIENIA%60,
+                      trainingDay: (fullDaysOfWeek as any)[e.DZIEN_TYGODNIA],
+                      trainingHour: translateNumberToHour(e.GODZINA)
+                    }
+                  })
+                }
+                next();
+              }else res.sendStatus(500);
+
             }else{
               await new Promise((resolve) => {
                 req.session.destroy(err => {
@@ -179,12 +205,12 @@ const bootstrap = async () => {
                 res.redirect('/');
               })
             }
-          }else res.status(500);
-        }else res.status(500);
-      }else res.status(500);
+          }else res.sendStatus(500);
+        }else res.sendStatus(500);
+      }else res.sendStatus(500);
     }catch(err){
       console.error(err);
-      res.status(500);  
+      res.sendStatus(500);  
       res.send('Błąd wewnętrzny')       
         
     }finally{
@@ -195,52 +221,48 @@ const bootstrap = async () => {
   }
 
   // routes
-  app.get('/', async (req: Request, res: Response) => {
-    if(process.env.STILL_LOGGED_IN == "true"){
-      req.session.username = "admin"
-      req.session.save();
+  app.get('/', checkLoggedIn, async (req: Request, res: Response) => {
+    const username = req.session.username;
+    let pool, connection, result;
+    try {
+      pool = await getPool();
+      connection = await pool.getConnection();
+      result = (await connection.execute(`SELECT TO_CHAR(wt.data_zakonczenia, 'DAY') as DZIEN, COUNT(*) as N FROM wykonanetreningi wt JOIN plantreningowy pt ON wt.plantreningowy_id = pt.id WHERE wt.data_zakonczenia BETWEEN TRUNC(SYSDATE, 'IW') AND SYSDATE AND pt.uzytkownicy_login=:login GROUP BY TO_CHAR(wt.data_zakonczenia, 'DAY')`, [username], { outFormat: OUT_FORMAT_OBJECT })).rows;
+      if (result) {
+        res.render("cockpit", { username: username, results: result, notification: (req as any).notification });
+      } else res.sendStatus(500);
+    } catch (err) {
+      console.error(err);
+      res.sendStatus(500);
+      res.send('Błąd wewnętrzny')
+    } finally {
+      await connection?.close();
+      await pool?.close();
     }
-    if(!req.session.username) {
-      res.render("welcome", {});
-    } else {
-      const username = req.session.username;
-      let pool, connection, result;
-      try {
-        pool = await getPool();
-        connection = await pool.getConnection();
-        result = (await connection.execute(`SELECT TO_CHAR(wt.data_zakonczenia, 'DAY') as DZIEN, COUNT(*) as N FROM wykonanetreningi wt JOIN plantreningowy pt ON wt.plantreningowy_id = pt.id WHERE wt.data_zakonczenia BETWEEN TRUNC(SYSDATE, 'IW') AND SYSDATE AND pt.uzytkownicy_login=:login GROUP BY TO_CHAR(wt.data_zakonczenia, 'DAY')`, [username], { outFormat: OUT_FORMAT_OBJECT })).rows;
-        if (result) {
-          res.render("cockpit", { username: username, results: result });
-        } else res.status(500);
-      } catch (err) {
-        console.error(err);
-        res.status(500);
-        res.send('Błąd wewnętrzny')
-      } finally {
-        await connection?.close();
-        await pool?.close();
-      }
-    }
+  });
+
+  app.get('/welcome', (req: Request, res: Response) => {
+    res.render("welcome", {});
   });
 
   app.get('/created/:what', checkLoggedIn, (req: Request, res: Response) => {
     res.render('info', {
       info: 'Dodano',
-      what: req.params.what
+      what: req.params.what, notification: (req as any).notification
     })
   });
 
   app.get('/modified/:what', checkLoggedIn, (req: Request, res: Response) => {
     res.render('info', {
       info: 'Zmieniono',
-      what: req.params.what
+      what: req.params.what, notification: (req as any).notification
     })
   });
 
   app.get('/done/:what', checkLoggedIn, (req: Request, res: Response) => {
     res.render('info', {
       info: 'Ukończono',
-      what: req.params.what
+      what: req.params.what, notification: (req as any).notification
     })
   });
 
@@ -256,13 +278,13 @@ const bootstrap = async () => {
           if(result2){
             res.render("training_creator", {
               exercises: result.flat(),
-              equipment: result2
+              equipment: result2, notification: (req as any).notification
             });
-            }else res.status(500)
-        }else res.status(500)
+            }else res.sendStatus(500)
+        }else res.sendStatus(500)
     }catch(err){
       console.error(err);
-      res.status(500);  
+      res.sendStatus(500);  
       res.send('Błąd wewnętrzny')       
         
     }finally{
@@ -280,12 +302,12 @@ const bootstrap = async () => {
       result = (await connection.execute(`SELECT nazwa, ma_zdjecie FROM sprzet`, [], { outFormat: OUT_FORMAT_ARRAY } )).rows;
       if(result){
           res.render("exercises_creator", {
-            equipment: result
+            equipment: result, notification: (req as any).notification
           });
-        }else res.status(500)
+        }else res.sendStatus(500)
     }catch(err){
       console.error(err);
-      res.status(500);  
+      res.sendStatus(500);  
       res.send('Błąd wewnętrzny')       
         
     }finally{
@@ -297,7 +319,7 @@ const bootstrap = async () => {
   });
 
   app.get('/equipment-creator', checkLoggedIn, (req: Request, res: Response) => {
-    res.render("equipment_creator", {});
+    res.render("equipment_creator", {notification: (req as any).notification});
   });
 
   app.get('/training-plan-creator/new-:training', checkLoggedIn, async (req: Request, res: Response) => {
@@ -310,7 +332,7 @@ const bootstrap = async () => {
       if(result){
         if(result.length === 0){
           res.render('error', {
-            msg: 'Taki trening nie istnieje.'
+            msg: 'Taki trening nie istnieje.', notification: (req as any).notification
           })
         }else{
           const data = result[0] as {
@@ -319,17 +341,17 @@ const bootstrap = async () => {
           };
           if(data.UZYTKOWNICY_LOGIN !== req.session.username && data.CZY_PRYWATNY === 'T'){
             res.render('error', {
-              msg: 'Niestety ten trening nie należy do ciebie i jest prywatny.'
+              msg: 'Niestety ten trening nie należy do ciebie i jest prywatny.', notification: (req as any).notification
             })
           }else{
-            res.render('training_plan_creator', {})
+            res.render('training_plan_creator', {notification: (req as any).notification})
           }
         }
           
-      }else res.status(500)
+      }else res.sendStatus(500)
     }catch(err){
       console.error(err);
-      res.status(500);  
+      res.sendStatus(500);  
       res.send('Błąd wewnętrzny')       
         
     }finally{
@@ -348,7 +370,7 @@ const bootstrap = async () => {
       if(result){
         if(result.length === 0){
           res.render('error', {
-            msg: 'Taki plan treningowy nie istnieje.\nMożliwe, że został usunięty niedawno w równoległej sesji.'
+            msg: 'Taki plan treningowy nie istnieje.\nMożliwe, że został usunięty niedawno w równoległej sesji.', notification: (req as any).notification
           })
         }else{
           const data = result[0] as {
@@ -357,12 +379,12 @@ const bootstrap = async () => {
           };
           if(data.UZYTKOWNICY_LOGIN !== req.session.username){
             res.render('error', {
-              msg: 'Niestety ten plan treningowy nie należy do ciebie.\nDlatego nie możesz go modyfikować.'
+              msg: 'Niestety ten plan treningowy nie należy do ciebie.\nDlatego nie możesz go modyfikować.', notification: (req as any).notification
             })
           }else{
             if(data.DATA_ZAKONCZENIA !== null && data.DATA_ZAKONCZENIA < (new Date())){
               res.render('error', {
-                msg: 'Niestety ten plan treningowy jest już zakończony.\nDlatego nie możesz go modyfikować.\nProponujemy stworzyć nowy.'
+                msg: 'Niestety ten plan treningowy jest już zakończony.\nDlatego nie możesz go modyfikować.\nProponujemy stworzyć nowy.', notification: (req as any).notification
               })
             }else{
               result = (await connection.execute(`SELECT dzien_tygodnia, godzina, dzien_tyg_przypomnienia, godz_przypomnienia FROM DNITRENINGOWE WHERE PLANTRENINGOWY_ID=:id`, [req.params.id], { outFormat: OUT_FORMAT_OBJECT } )).rows;
@@ -381,17 +403,17 @@ const bootstrap = async () => {
                     element.DZIEN_TYG_PRZYPOMNIENIA == null ? undefined : element.DZIEN_TYG_PRZYPOMNIENIA,
                     element.GODZ_PRZYPOMNIENIA === null ? undefined : translateNumberToHour(element.GODZ_PRZYPOMNIENIA ),
                   ]),
-                  end: data.DATA_ZAKONCZENIA === null ? undefined : formatDate(data.DATA_ZAKONCZENIA)
+                  end: data.DATA_ZAKONCZENIA === null ? undefined : formatDate(data.DATA_ZAKONCZENIA), notification: (req as any).notification
                 })
-              }else res.status(500)
+              }else res.sendStatus(500)
             }
           }
         }
           
-      }else res.status(500)
+      }else res.sendStatus(500)
     }catch(err){
       console.error(err);
-      res.status(500);  
+      res.sendStatus(500);  
       res.send('Błąd wewnętrzny')       
         
     }finally{
@@ -408,11 +430,11 @@ const bootstrap = async () => {
       connection = await pool.getConnection();
       result = (await connection.execute(`SELECT * FROM treningi WHERE czy_prywatny='N' OR uzytkownicy_login=:login`, [username], { outFormat: OUT_FORMAT_ARRAY })).rows;
       if (result) {
-        res.render('training-search', { username: req.session.username, table: result });
+        res.render('training-search', { username: req.session.username, table: result, notification: (req as any).notification });
       }
     } catch (err) {
       console.error(err);
-      res.status(500);
+      res.sendStatus(500);
     } finally {
       await connection?.close();
       await pool?.close();
@@ -437,9 +459,9 @@ const bootstrap = async () => {
                 const skutecznosc = result2[0][0 as keyof typeof result2[0]];
                 const trudnosc = result2[0][1 as keyof typeof result2[0]];
                 const intensywnosc = result2[0][2 as keyof typeof result2[0]];
-                res.render('training-panel', { username: username, trainingName: trainingName, trainingAuthor: trainingAuthor, skutecznosc: skutecznosc, trudnosc: trudnosc, intensywnosc: intensywnosc, wasGraded: true });
+                res.render('training-panel', { username: username, notification: (req as any).notification, trainingName: trainingName, trainingAuthor: trainingAuthor, skutecznosc: skutecznosc, trudnosc: trudnosc, intensywnosc: intensywnosc, wasGraded: true });
               } else {
-                res.render('training-panel', { username: username, trainingName: trainingName, trainingAuthor: trainingAuthor });
+                res.render('training-panel', { username: username, notification: (req as any).notification, trainingName: trainingName, trainingAuthor: trainingAuthor });
               }
             }
           } else {
@@ -449,7 +471,7 @@ const bootstrap = async () => {
       }
     } catch (err) {
       console.error(err);
-      res.status(500);
+      res.sendStatus(500);
     } finally {
       await connection?.close();
       await pool?.close();
@@ -464,11 +486,11 @@ const bootstrap = async () => {
       connection = await pool.getConnection();
       result = (await connection.execute(`SELECT * FROM cwiczenia`, [], { outFormat: OUT_FORMAT_ARRAY })).rows;
       if (result) {
-        res.render('exercise-search', { table: result });
+        res.render('exercise-search', { table: result, notification: (req as any).notification });
       }
     } catch (err) {
       console.error(err);
-      res.status(500);
+      res.sendStatus(500);
     } finally {
       await connection?.close();
       await pool?.close();
@@ -492,9 +514,9 @@ const bootstrap = async () => {
                 const cenaSprzetu = result2[0][0 as keyof typeof result2[0]];
                 const trudnosc = result2[0][1 as keyof typeof result2[0]];
                 const intensywnosc = result2[0][2 as keyof typeof result2[0]];
-                res.render('exercise-panel', { username: username, exerciseName: exerciseName, cenaSprzetu: cenaSprzetu, trudnosc: trudnosc, intensywnosc: intensywnosc, wasGraded: true });
+                res.render('exercise-panel', { username: username, notification: (req as any).notification, exerciseName: exerciseName, cenaSprzetu: cenaSprzetu, trudnosc: trudnosc, intensywnosc: intensywnosc, wasGraded: true });
               } else {
-                res.render('exercise-panel', { username: username, exerciseName: exerciseName});
+                res.render('exercise-panel', { username: username, notification: (req as any).notification, exerciseName: exerciseName});
               }
             }
           } else {
@@ -504,7 +526,7 @@ const bootstrap = async () => {
       }
     } catch (err) {
       console.error(err);
-      res.status(500);
+      res.sendStatus(500);
     } finally {
       await connection?.close();
       await pool?.close();
@@ -520,11 +542,11 @@ const bootstrap = async () => {
       result = (await connection.execute(`SELECT nazwa FROM treningi WHERE czy_prywatny = 'N' AND uzytkownicy_login=:login`, [username], { outFormat: OUT_FORMAT_ARRAY })).rows;
       result2 = (await connection.execute(`SELECT nazwa FROM treningi WHERE czy_prywatny = 'T' AND uzytkownicy_login=:login`, [username], { outFormat: OUT_FORMAT_ARRAY })).rows;
       if (result && result2) {
-        res.render('user-trainings', { username: username, tablePublic: result, tablePrivate: result2 });
+        res.render('user-trainings', { username: username, notification: (req as any).notification, tablePublic: result, tablePrivate: result2 });
       }
     } catch (err) {
       console.error(err);
-      res.status(500);
+      res.sendStatus(500);
     } finally {
       await connection?.close();
       await pool?.close();
@@ -542,7 +564,7 @@ const bootstrap = async () => {
       if (result) {
         if (result[0]) {
           if ((result[0] as { N: number }).N === 1) {
-            res.render('delete-training', {username: username, trainingName: trainingName });
+            res.render('delete-training', {username: username, trainingName: trainingName, notification: (req as any).notification });
           } else {
             res.redirect('/');
           }
@@ -550,7 +572,7 @@ const bootstrap = async () => {
       } 
     } catch (err) {
       console.error(err);
-      res.status(500);
+      res.sendStatus(500);
     } finally {
       await connection?.close();
       await pool?.close();
@@ -566,11 +588,11 @@ const bootstrap = async () => {
       result = (await connection.execute(`SELECT id, treningi_nazwa, TO_CHAR(data_rozpoczecia, 'DD-MM-YYYY'), TO_CHAR(data_zakonczenia, 'DD-MM-YYYY') FROM plantreningowy WHERE uzytkownicy_login=:login AND (data_zakonczenia IS NULL OR SYSDATE < data_zakonczenia)`, [username], { outFormat: OUT_FORMAT_ARRAY })).rows;
       result2 = (await connection.execute(`SELECT id, treningi_nazwa, TO_CHAR(data_rozpoczecia, 'DD-MM-YYYY'), TO_CHAR(data_zakonczenia, 'DD-MM-YYYY') FROM plantreningowy WHERE uzytkownicy_login=:login AND (data_zakonczenia IS NOT NULL AND SYSDATE > data_zakonczenia)`, [username], { outFormat: OUT_FORMAT_ARRAY })).rows;
       if (result && result2) {
-        res.render('user-training-plans', { username: username, currentPlans: result, finishedPlans: result2 });
+        res.render('user-training-plans', { username: username, currentPlans: result, finishedPlans: result2, notification: (req as any).notification });
       }
     } catch (err) {
       console.error(err);
-      res.status(500);
+      res.sendStatus(500);
     } finally {
       await connection?.close();
       await pool?.close();
@@ -584,11 +606,11 @@ const bootstrap = async () => {
       connection = await pool.getConnection();
       result = (await connection.execute(`SELECT * FROM sprzet`, [], { outFormat: OUT_FORMAT_ARRAY })).rows;
       if (result) {
-        res.render('equipment-search', { table: result });
+        res.render('equipment-search', { table: result, notification: (req as any).notification });
       }
     } catch (err) {
       console.error(err);
-      res.status(500);
+      res.sendStatus(500);
     } finally {
       await connection?.close();
       await pool?.close();
@@ -610,7 +632,7 @@ const bootstrap = async () => {
               if (result2[0]) {
                 const hasImage = result2[0][0 as keyof typeof result2[0]];
                 const hasDifferentWeight = result2[0][1 as keyof typeof result2[0]];
-                res.render('equipment-panel', { equipmentName: equipmentName, hasImage: hasImage, hasDifferentWeight: hasDifferentWeight });
+                res.render('equipment-panel', { equipmentName: equipmentName, notification: (req as any).notification, hasImage: hasImage, hasDifferentWeight: hasDifferentWeight });
               }
             }
           } else {
@@ -620,7 +642,7 @@ const bootstrap = async () => {
       }
     } catch (err) {
       console.error(err);
-      res.status(500);
+      res.sendStatus(500);
     } finally {
       await connection?.close();
       await pool?.close();
@@ -636,12 +658,12 @@ const bootstrap = async () => {
         result = (await connection.execute(`SELECT preferowana_jednostka FROM uzytkownicy WHERE login=:login`, [username], { outFormat: OUT_FORMAT_OBJECT })).rows;
         if (result) {
           if (result[0]) {
-            res.render('account-settings', { username: req.session.username, unit: (result[0] as { PREFEROWANA_JEDNOSTKA: string }).PREFEROWANA_JEDNOSTKA});
+            res.render('account-settings', { username: req.session.username, notification: (req as any).notification, unit: (result[0] as { PREFEROWANA_JEDNOSTKA: string }).PREFEROWANA_JEDNOSTKA});
           }
         }
       } catch (err) {
         console.error(err);
-        res.status(500);          
+        res.sendStatus(500);          
         res.send('Błąd wewnętrzny')       
       } finally {
         await connection?.close();
@@ -650,7 +672,7 @@ const bootstrap = async () => {
   });
 
   app.get('/delete-account', checkLoggedIn, (req: Request, res: Response) => {
-    res.render('delete-account', {username: req.session.username});
+    res.render('delete-account', {username: req.session.username, notification: (req as any).notification});
   });
 
   app.get('/training-mode/:id', checkLoggedIn, async (req: Request, res: Response) => {
@@ -668,7 +690,7 @@ const bootstrap = async () => {
               result = JSON.parse(result[0]);
               if(result.login !== req.session.username){
                 res.render('error', {
-                  msg: 'Ten plan treningowy nie należy do ciebie!'
+                  msg: 'Ten plan treningowy nie należy do ciebie!', notification: (req as any).notification
                 })
               }else{
                 var end;
@@ -697,28 +719,28 @@ const bootstrap = async () => {
                           if(result3[0]){
                             result3 = JSON.parse(result3[0]);
                             res.render("training_mode", {
-                              exercises: result.cwiczenia,
+                              exercises: result.cwiczenia, notification: (req as any).notification,
                               unit: (result2[0] as { PREFEROWANA_JEDNOSTKA: string }).PREFEROWANA_JEDNOSTKA,
                               prev: result3
                             });
-                          }else res.status(500);
-                        }else res.status(500);
-                      }else res.status(500);
-                    }else res.status(500);
-                  }else res.status(500)
+                          }else res.sendStatus(500);
+                        }else res.sendStatus(500);
+                      }else res.sendStatus(500);
+                    }else res.sendStatus(500);
+                  }else res.sendStatus(500)
                   
                 }else{
                   res.render("error", {
-                    msg: "Ten plan treningowy jest już zakończony"
+                    msg: "Ten plan treningowy jest już zakończony", notification: (req as any).notification
                   })
                 }
               }
-            }else res.status(500)
-          }else res.status(500)
-        }else res.status(500)
+            }else res.sendStatus(500)
+          }else res.sendStatus(500)
+        }else res.sendStatus(500)
     }catch(err){
       console.error(err);
-      res.status(500);  
+      res.sendStatus(500);  
       res.send('Błąd wewnętrzny')       
         
     }finally{
@@ -759,12 +781,12 @@ const bootstrap = async () => {
                 }
                 req.session.username = username;
                 req.session.save();
-                res.redirect('/');
-              }else res.status(500)
-            }else res.status(500)
+                res.redirect('/')
+              }else res.sendStatus(500)
+            }else res.sendStatus(500)
           }catch(err){
             console.error(err);
-            res.status(500);   
+            res.sendStatus(500);   
             res.send('Błąd wewnętrzny')       
           }finally{
             await connection?.close();
@@ -773,14 +795,14 @@ const bootstrap = async () => {
         }else{
           res.render("welcome", {
             error: "Niepoprawny format nazwy użytkownika!",
-            username: username
+            username: username, notification: (req as any).notification
           });
         }
       }else{
-        res.status(400);
+        res.sendStatus(400);
       }
     }else{
-      res.status(404);
+      res.sendStatus(404);
     }
   });
 
@@ -800,12 +822,12 @@ const bootstrap = async () => {
               if ((previous_unit[0] as { PREFEROWANA_JEDNOSTKA: string }).PREFEROWANA_JEDNOSTKA !== new_unit) {
                 result = await connection.execute(`begin ZmienJednostke(:login); end;`, [username], {autoCommit: true}); 
               }
-              res.render('account-settings', { username: req.session.username, unit: new_unit, unitCorrectlyChanged: ((previous_unit[0] as { PREFEROWANA_JEDNOSTKA: string }).PREFEROWANA_JEDNOSTKA !== new_unit) });
+              res.render('account-settings', { username: req.session.username, notification: (req as any).notification, unit: new_unit, unitCorrectlyChanged: ((previous_unit[0] as { PREFEROWANA_JEDNOSTKA: string }).PREFEROWANA_JEDNOSTKA !== new_unit) });
             }
           }
         } catch (err) {
           console.error(err);
-          res.status(500);
+          res.sendStatus(500);
         } finally {
           await connection?.close();
           await pool?.close();
@@ -818,7 +840,7 @@ const bootstrap = async () => {
     const typed_username = req.body.typed_username.toUpperCase();
     const username = req.session.username;
     if (typed_username !== username) {
-      res.render('delete-account', { username: username, incorrectTypedUsername: true });
+      res.render('delete-account', { username: username, notification: (req as any).notification, incorrectTypedUsername: true });
     } else {
       res.redirect('/logout');
       let pool, connection, result;
@@ -843,7 +865,7 @@ const bootstrap = async () => {
         await connection.commit();
       } catch (err) {
         console.error(err);
-        res.status(500);
+        res.sendStatus(500);
       } finally {
         await connection?.close();
         await pool?.close();
@@ -856,7 +878,7 @@ const bootstrap = async () => {
     const typedTrainingName = req.body.typed_training_name;
     const actualTrainingName = req.body.actual_training_name;
     if (typedTrainingName !== actualTrainingName) {
-      res.render('delete-training', { username: username, trainingName: actualTrainingName, incorrectTypedTrainingName: true });
+      res.render('delete-training', { username: username, notification: (req as any).notification, trainingName: actualTrainingName, incorrectTypedTrainingName: true });
     } else {
       let pool, connection;
       try {
@@ -870,7 +892,7 @@ const bootstrap = async () => {
         res.redirect('/user-trainings');
       } catch (err) {
         console.error(err);
-        res.status(500);
+        res.sendStatus(500);
       } finally {
         await connection?.close();
         await pool?.close();
@@ -922,11 +944,11 @@ const bootstrap = async () => {
                     error: "Ta nazwa jest już zajęta!"
                   });
                 }
-              }else res.status(500)
-            }else res.status(500)
+              }else res.sendStatus(500)
+            }else res.sendStatus(500)
           }catch(err){
             console.error(err);
-            res.status(500);     
+            res.sendStatus(500);     
             res.json({
               error: 'Błąd wewnętrzny'
             })      
@@ -1024,11 +1046,11 @@ const bootstrap = async () => {
                     error: "Ta nazwa jest już zajęta!"
                   });
                 }
-              }else res.status(500)
-            }else res.status(500)
+              }else res.sendStatus(500)
+            }else res.sendStatus(500)
           }catch(err){
             console.error(err);
-            res.status(500);   
+            res.sendStatus(500);   
             res.json({
               error: 'Błąd wewnętrzny'
             })       
@@ -1113,18 +1135,18 @@ const bootstrap = async () => {
                           error: "Twoje konto nie istnieje!"
                         })
                       }
-                    }else res.status(500)
-                  }else res.status(500)
+                    }else res.sendStatus(500)
+                  }else res.sendStatus(500)
                 }else{
                   res.json({
                     error: "Ta nazwa jest już zajęta!"
                   });
                 }
-              }else res.status(500)
-            }else res.status(500)
+              }else res.sendStatus(500)
+            }else res.sendStatus(500)
           }catch(err){
             console.error(err);
-            res.status(500);   
+            res.sendStatus(500);   
             res.json({
               error: 'Błąd wewnętrzny'
             })       
@@ -1160,7 +1182,7 @@ const bootstrap = async () => {
       if(result){
         if(result.length === 0){
           res.render('error', {
-            msg: 'Taki trening nie istnieje.'
+            msg: 'Taki trening nie istnieje.', notification: (req as any).notification
           })
         }else{
           const data = result[0] as {
@@ -1169,7 +1191,7 @@ const bootstrap = async () => {
           };
           if(data.UZYTKOWNICY_LOGIN !== req.session.username && data.CZY_PRYWATNY === 'T'){
             res.render('error', {
-              msg: 'Niestety ten trening nie należy do ciebie i jest prywatny.'
+              msg: 'Niestety ten trening nie należy do ciebie i jest prywatny.', notification: (req as any).notification
             })
           }else{
             var error = false;
@@ -1179,21 +1201,21 @@ const bootstrap = async () => {
                 var dt = Date.parse(req.body.end);
                 if(isNaN(dt)){
                   res.render('error', {
-                    msg: 'Niepoprawna data zakończenia.'
+                    msg: 'Niepoprawna data zakończenia.', notification: (req as any).notification
                   })
                   error = true;
                 }else{
                   end = new Date(dt);
                   if(end < (new Date())){
                     res.render('error', {
-                      msg: 'Podano zbyt wczesną datę.'
+                      msg: 'Podano zbyt wczesną datę.', notification: (req as any).notification
                     })
                     error = true;
                   }
                 }
               }else{
                 res.render('error', {
-                  msg: 'Niepoprawny format daty.'
+                  msg: 'Niepoprawny format daty.', notification: (req as any).notification
                 })
                 error = true;
               }
@@ -1215,7 +1237,7 @@ const bootstrap = async () => {
                       if(!daysOfWeek.includes(day.dow) || hour > 1440 || (day.ndow !== undefined && !daysOfWeek.includes(day.ndow)) || (nhour !== undefined && nhour > 1440)){
                         error = true;
                         res.render('error', {
-                          msg: 'Niepoprawny dzień treningowy.'
+                          msg: 'Niepoprawny dzień treningowy.', notification: (req as any).notification
                         })
                         break;
 
@@ -1236,7 +1258,7 @@ const bootstrap = async () => {
                       }else{
                         error = true;
                         res.render('error', {
-                          msg: 'Zduplikowany dzień treningowy.'
+                          msg: 'Zduplikowany dzień treningowy.', notification: (req as any).notification
                         })
                         break;
                       }
@@ -1247,16 +1269,16 @@ const bootstrap = async () => {
                     await connection.commit();
                     res.redirect('/created/plan treningowy')
                   }
-                }else res.status(500)
-              }else res.status(500)
+                }else res.sendStatus(500)
+              }else res.sendStatus(500)
             }
           }
         }
           
-      }else res.status(500)
+      }else res.sendStatus(500)
     }catch(err){
       console.error(err);
-      res.status(500);  
+      res.sendStatus(500);  
       res.send('Błąd wewnętrzny')       
     }finally{
       await connection?.close();
@@ -1274,7 +1296,7 @@ const bootstrap = async () => {
       if(result){
         if(result.length === 0){
           res.render('error', {
-            msg: 'Taki plan treningowy nie istnieje.\nMożliwe, że został usunięty niedawno w równoległej sesji.'
+            msg: 'Taki plan treningowy nie istnieje.\nMożliwe, że został usunięty niedawno w równoległej sesji.', notification: (req as any).notification
           })
         }else{
           const data = result[0] as {
@@ -1283,12 +1305,12 @@ const bootstrap = async () => {
           };
           if(data.UZYTKOWNICY_LOGIN !== req.session.username){
             res.render('error', {
-              msg: 'Niestety ten plan treningowy nie należy do ciebie.\nDlatego nie możesz go modyfikować.'
+              msg: 'Niestety ten plan treningowy nie należy do ciebie.\nDlatego nie możesz go modyfikować.', notification: (req as any).notification
             })
           }else{
             if(data.DATA_ZAKONCZENIA !== null && data.DATA_ZAKONCZENIA < (new Date())){
               res.render('error', {
-                msg: 'Niestety ten plan treningowy jest już zakończony.\nDlatego nie możesz go modyfikować.\nProponujemy stworzyć nowy.'
+                msg: 'Niestety ten plan treningowy jest już zakończony.\nDlatego nie możesz go modyfikować.\nProponujemy stworzyć nowy.', notification: (req as any).notification
               })
             }else{
               result = (await connection.execute(`DELETE FROM DNITRENINGOWE WHERE PLANTRENINGOWY_ID=:id`, [req.params.id], { autoCommit: false } )).rows;
@@ -1300,21 +1322,21 @@ const bootstrap = async () => {
                   var dt = Date.parse(req.body.end);
                   if(isNaN(dt)){
                     res.render('error', {
-                      msg: 'Niepoprawna data zakończenia.'
+                      msg: 'Niepoprawna data zakończenia.', notification: (req as any).notification
                     })
                     error = true;
                   }else{
                     end = new Date(dt);
                     if(end < (new Date())){
                       res.render('error', {
-                        msg: 'Podano zbyt wczesną datę.'
+                        msg: 'Podano zbyt wczesną datę.', notification: (req as any).notification
                       })
                       error = true;
                     }
                   }
                 }else{
                   res.render('error', {
-                    msg: 'Niepoprawny format daty.'
+                    msg: 'Niepoprawny format daty.', notification: (req as any).notification
                   })
                   error = true;
                 }
@@ -1332,7 +1354,7 @@ const bootstrap = async () => {
                     if(!daysOfWeek.includes(day.dow) || hour > 1440 || (day.ndow !== undefined && !daysOfWeek.includes(day.ndow)) || (nhour !== undefined && nhour > 1440)){
                       error = true;
                       res.render('error', {
-                        msg: 'Niepoprawny dzień treningowy.'
+                        msg: 'Niepoprawny dzień treningowy.', notification: (req as any).notification
                       })
                       break;
 
@@ -1353,7 +1375,7 @@ const bootstrap = async () => {
                     }else{
                       error = true;
                       res.render('error', {
-                        msg: 'Zduplikowany dzień treningowy.'
+                        msg: 'Zduplikowany dzień treningowy.', notification: (req as any).notification
                       })
                       break;
                     }
@@ -1369,10 +1391,10 @@ const bootstrap = async () => {
           }
         }
           
-      }else res.status(500)
+      }else res.sendStatus(500)
     }catch(err){
       console.error(err);
-      res.status(500);  
+      res.sendStatus(500);  
       res.send('Błąd wewnętrzny')       
     }finally{
       await connection?.close();
@@ -1392,10 +1414,10 @@ const bootstrap = async () => {
       pool = await getPool();
       connection = await pool.getConnection();
       await connection.execute(`INSERT INTO ocenytreningow VALUES (:skutecznosc, :trudnosc, :intensywnosc, :login, :nazwa)`, [skutecznosc, trudnosc, intensywnosc, username, trainingName], {autoCommit: true});
-      res.render('training-panel', {username: username, trainingName: trainingName, trainingAuthor: trainingAuthor, gradeSuccess: true, skutecznosc: skutecznosc, trudnosc: trudnosc, intensywnosc: intensywnosc, wasGraded: true});
+      res.render('training-panel', {username: username, notification: (req as any).notification, trainingName: trainingName, trainingAuthor: trainingAuthor, gradeSuccess: true, skutecznosc: skutecznosc, trudnosc: trudnosc, intensywnosc: intensywnosc, wasGraded: true});
     } catch (err) {
       console.error(err);
-      res.status(500);
+      res.sendStatus(500);
     } finally {
       await connection?.close();
       await pool?.close();
@@ -1413,10 +1435,10 @@ const bootstrap = async () => {
       pool = await getPool();
       connection = await pool.getConnection();
       await connection.execute(`INSERT INTO ocenycwiczen VALUES (:cenaSprzetu, :trudnosc, :intensywnosc, :login, :nazwa)`, [cenaSprzetu, trudnosc, intensywnosc, username, exerciseName], { autoCommit: true });
-      res.render('exercise-panel', { username: username, exerciseName: exerciseName, gradeSuccess: true, cenaSprzetu: cenaSprzetu, trudnosc: trudnosc, intensywnosc: intensywnosc, wasGraded: true });
+      res.render('exercise-panel', { username: username, notification: (req as any).notification, exerciseName: exerciseName, gradeSuccess: true, cenaSprzetu: cenaSprzetu, trudnosc: trudnosc, intensywnosc: intensywnosc, wasGraded: true });
     } catch (err) {
       console.error(err);
-      res.status(500);
+      res.sendStatus(500);
     } finally {
       await connection?.close();
       await pool?.close();
@@ -1614,12 +1636,12 @@ const bootstrap = async () => {
                   res.json({'error': 'Ten plan treningowy jest już zakończony'})
                 }
               }
-            }else res.status(500)
-          }else res.status(500)
-        }else res.status(500)
+            }else res.sendStatus(500)
+          }else res.sendStatus(500)
+        }else res.sendStatus(500)
     }catch(err){
       console.error(err);
-      res.status(500);  
+      res.sendStatus(500);  
       res.send('Błąd wewnętrzny')       
         
     }finally{

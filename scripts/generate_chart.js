@@ -6,12 +6,11 @@ window.addEventListener('load', function () {
         'czw',
         'pt',
         'sob',
-        'nd'
+        'ndz'
     ];
 
     let exerciseCount = [0, 0, 0, 0, 0, 0, 0];
 
-    console.log(results);
     if (results.length) {
         results.forEach(n => {
             if (n.DZIEN.includes('PONIEDZIAŁEK')) {
