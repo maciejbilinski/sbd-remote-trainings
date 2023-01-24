@@ -1,5 +1,4 @@
-<% layout('./layout', {styles: ['welcome', 'cockpit'], scripts: ['generate_chart']}) %>
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.2.0/dist/chart.umd.min.js"></script>
+<% layout('./layout', {styles: ['welcome', 'cockpit'], scripts: ['generate_chart'], charts: true}) %>
 <script type="text/javascript">
 const results = JSON.parse('<%~ JSON.stringify(it.results) %>');
 </script>
