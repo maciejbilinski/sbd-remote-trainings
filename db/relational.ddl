@@ -5,7 +5,6 @@ CREATE TABLE uzytkownicy (
 );
 
 
-
 CREATE TABLE cwiczenia (
     nazwa             VARCHAR2(256) PRIMARY KEY ,
     ma_instruktaz     CHAR(1) NOT NULL CHECK (ma_instruktaz IN ('T', 'N')),

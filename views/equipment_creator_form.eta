@@ -8,7 +8,7 @@
 </h1>
 <div class="form-group">
     <label for="name"><sup class="red">*</sup>Nazwa sprzętu:</label>
-    <input type="text" class="form-control" name="name" id="eq_name" placeholder="np. Sztanga" required>
+    <input type="text" class="form-control" name="name" minlength="1" maxlength="255" id="eq_name" placeholder="np. Sztanga" required>
 </div>
 <div class="form-group">
     <label for="type"><sup class="red">*</sup>Wykorzystuje obciążenie:</label>

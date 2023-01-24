@@ -7,7 +7,7 @@
 </h1>
 <div class="form-group">
     <label for="name"><sup class="red">*</sup>Nazwa ćwiczenia:</label>
-    <input type="text" class="form-control" name="name" id="ex_name" placeholder="np. Przysiad" required>
+    <input type="text" class="form-control" name="name" minlength="1" maxlength="255" id="ex_name" placeholder="np. Przysiad" required>
 </div>
 <div class="form-group">
     <label for="type"><sup class="red">*</sup>Typ ćwiczenia:</label>

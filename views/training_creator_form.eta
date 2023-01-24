@@ -7,7 +7,7 @@
 </h1>
 <div class="form-group">
     <label for="name"><sup class="red">*</sup>Nazwa treningu:</label>
-    <input type="text" class="form-control" name="name" id="tr_name" placeholder="np. Trening Adama" required>
+    <input type="text" class="form-control" name="name" minlength="1" maxlength="255" id="tr_name" placeholder="np. Trening Adama" required>
 </div>
 <div class="form-group">
     <label for="type"><sup class="red">*</sup>Prywatność:</label>
