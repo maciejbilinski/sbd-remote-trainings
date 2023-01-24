@@ -917,9 +917,9 @@ const bootstrap = async () => {
                   if(req.files?.photo){
                     const photo = (req.files.photo as UploadedFile);
                     const ext = getExtension(photo.name);
-                    if(!['jpg', 'png', 'jpeg'].includes(ext)){
+                    if(!['png'].includes(ext)){
                       res.json({
-                        error: "Niepoprawny format zdjęcia! Dozwolone to: 'jpg', 'png', 'jpeg'."
+                        error: "Niepoprawny format zdjęcia! Dozwolone to: 'png'."
                       });
                       error = true;
                     }else{
@@ -1091,6 +1091,42 @@ const bootstrap = async () => {
           pool = await getPool();
           connection = await pool.getConnection();
           result = await connection.execute(`UPDATE cwiczenia SET ma_instruktaz='T' WHERE nazwa=:nazwa`, [req.body.name], {autoCommit: true});
+          return res.json({
+            success: true
+          })
+        }
+      }catch(err){
+        console.error(err);
+        res.sendStatus(500);   
+        res.json({
+          error: 'Błąd wewnętrzny'
+        })       
+      }finally{
+        await connection?.close();
+        await pool?.close();
+      }
+    }else{
+      res.json({
+        error: "Nie wypełniono obowiązkowych pól!"
+      });
+    }
+  });
+
+  app.post('/add-photo', checkLoggedIn, fileUpload({limits:{fileSize: 100000000}}), async (req: Request, res: Response) => {
+    if(req.body.name && req.files?.photo){
+      let pool, connection, result;
+      try{
+        const photo = (req.files.photo as UploadedFile);
+        const ext = getExtension(photo.name);
+        if(!['png'].includes(ext)){
+          res.json({
+            error: "Niepoprawny format zdjęcia! Dozwolone to: 'png'."
+          });
+        }else{
+          photo.mv(path.join(__dirname, '..', 'files', 'equipment', req.body.name+"."+ext))
+          pool = await getPool();
+          connection = await pool.getConnection();
+          result = await connection.execute(`UPDATE sprzet SET ma_zdjecie='T' WHERE nazwa=:nazwa`, [req.body.name], {autoCommit: true});
           return res.json({
             success: true
           })

@@ -133,4 +133,12 @@ window.addEventListener('load', function(){
             </video>`
         }
     }
+
+    const addPhoto = document.querySelector('#add-photo-form');
+    if(addPhoto){
+        addPhoto.onAdd = function(e){
+            const parent = addPhoto.parentNode;
+            parent.innerHTML = `<img src="/files/equipment/${addPhoto.querySelector('input[name=\'name\']').value}.png">`
+        }
+    }
 });

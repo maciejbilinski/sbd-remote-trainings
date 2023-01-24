@@ -1,4 +1,4 @@
-<% layout('./layout', {styles: ['welcome', 'cockpit' ]}) %>
+<% layout('./layout', {styles: ['welcome', 'cockpit' ], scripts: ['form']}) %>
 <section class="content" data-bs-theme="dark">
     <% if (it.addImageSuccess) { %>
         <div class="alert alert-success" role="alert">Pomyślnie dodano zdjęcie.</div>
@@ -14,8 +14,16 @@
     <% if (it.hasImage == 'T') { %>
     <img src="/files/equipment/<%= it.equipmentName %>.png" alt="<%= it.equipmentName %>">
     <% } else { %>
+    <div>
     <h2>Dodaj zdjęcie</h2>
-    <input type="button" value="Dodaj" class="btn btn-primary">
+    <form id="add-photo-form" ajax-form enctype="multipart/form-data" action="/add-photo">
+        <input type="hidden" name="name" value="<% =it.equipmentName %>">
+        <input type="file" class="form-control-file" id="photo" name="photo" accept="image/png">
+        <br>
+        <input type="submit" value="Dodaj" class="btn btn-primary" form-submit>
+        <p class="error" form-error style="margin:0;"></p>
+    </form>
+    </div>
     <% } %>
     <% if (it.hasDifferentWeight == 'T') { %>
     <br>
