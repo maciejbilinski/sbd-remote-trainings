@@ -6,8 +6,9 @@ import { copyFile } from 'fs';
 import session from 'express-session';
 import { BIND_OUT, NUMBER, OUT_FORMAT_ARRAY, OUT_FORMAT_OBJECT } from 'oracledb';
 import fileUpload, { UploadedFile } from 'express-fileupload';
-import path from 'path';
+import path, { resolve } from 'path';
 import { traceDeprecation } from 'process';
+import { rejects } from 'assert';
 
 const superhardquery = `
 SELECT 
@@ -107,7 +108,7 @@ const bootstrap = async () => {
   
 
   // Checks if user is logged in; if not, redirects to main page
-  const checkLoggedIn = (req: Request, res: Response, next: Function) => {
+  const checkLoggedIn = async (req: Request, res: Response, next: Function) => {
     if(process.env.STILL_LOGGED_IN == "true"){
       req.session.username = "admin"
       req.session.save();
@@ -115,7 +116,37 @@ const bootstrap = async () => {
     if(!req.session.username) {
       res.redirect('/');
     } else {
-      next();
+      let pool, connection, result;
+    try{
+      pool = await getPool();
+      connection = await pool.getConnection();
+      result = (await connection.execute(`SELECT COUNT(*) FROM uzytkownicy WHERE login=:1`, [req.session.username], { outFormat: OUT_FORMAT_ARRAY } )).rows;
+      if(result){  
+        if(result[0]){
+          result = result[0] as number[];
+          if(result){
+            if(result[0] === 1){
+              next();
+            }else{
+              await new Promise((resolve) => {
+                req.session.destroy(err => {
+                  resolve(err);
+                });
+                res.redirect('/');
+              })
+            }
+          }else res.status(500);
+        }else res.status(500);
+      }else res.status(500);
+    }catch(err){
+      console.error(err);
+      res.status(500);  
+      res.send('Błąd wewnętrzny')       
+        
+    }finally{
+      await connection?.close();
+      await pool?.close();
+    }
     }
   }
 
