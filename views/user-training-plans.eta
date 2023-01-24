@@ -32,7 +32,7 @@
                             <td><%= col[2] %></td>
                             <td><% if (col[3] !== null) { %><%= col[3] %><%}%></td>
                             <td><a href="/training-plan-creator/modify-<%= col[0] %>"><span class="material-symbols-outlined">edit</span></a></td>
-                            <td><span class="material-symbols-outlined">arrow_circle_right</span></td>
+                            <td><a href="/training-mode/<%= col[0] %>"><span class="material-symbols-outlined">arrow_circle_right</span></a></td>
                         </tr>
                     <% })} %>
                 </tbody>

@@ -11,21 +11,22 @@ window.addEventListener('load', function () {
 
     let exerciseCount = [0, 0, 0, 0, 0, 0, 0];
 
+    console.log(results);
     if (results.length) {
         results.forEach(n => {
-            if (n.DZIEN == 'PONIEDZIAŁEK') {
+            if (n.DZIEN.includes('PONIEDZIAŁEK')) {
                 exerciseCount[0] = n.N;
-            } else if (n.DZIEN == 'WTOREK') {
+            } else if (n.DZIEN.includes('WTOREK')) {
                 exerciseCount[1] = n.N;
-            } else if (n.DZIEN == 'ŚRODA') {
+            } else if (n.DZIEN.includes('ŚRODA')) {
                 exerciseCount[2] = n.N;
-            } else if (n.DZIEN == 'CZWARTEK') {
+            } else if (n.DZIEN.includes('CZWARTEK')) {
                 exerciseCount[3] = n.N;
-            } else if (n.DZIEN == 'PIĄTEK') {
+            } else if (n.DZIEN.includes('PIĄTEK')) {
                 exerciseCount[4] = n.N;
-            } else if (n.DZIEN == 'SOBOTA') {
+            } else if (n.DZIEN.includes('SOBOTA')) {
                 exerciseCount[5] = n.N;
-            } else if (n.DZIEN == 'NIEDZIELA') {
+            } else if (n.DZIEN.includes('NIEDZIELA')) {
                 exerciseCount[6] = n.N;
             }
         });
