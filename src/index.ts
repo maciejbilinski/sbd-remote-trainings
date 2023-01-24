@@ -477,7 +477,7 @@ const bootstrap = async () => {
 
   app.get('/training-mode/:id', checkLoggedIn, async (req: Request, res: Response) => {
     res.set('Cache-control', 'no-cache, max-age=0, must-revalidate, no-store')
-    let pool, connection, result;
+    let pool, connection, result, result2, result3;
     try{
       pool = await getPool();
       connection = await pool.getConnection();
@@ -505,9 +505,19 @@ const bootstrap = async () => {
                 }
 
                 if(ok){
-                  res.render("training_mode", {
-                    exercises: result.cwiczenia
-                  });
+                  result2 = (await connection.execute('SELECT preferowana_jednostka FROM uzytkownicy WHERE login=:1', [
+                    req.session.username
+                  ],{ outFormat: OUT_FORMAT_OBJECT })).rows;
+                  if (result2) {
+                    if (result2[0]) {
+                      res.render("training_mode", {
+                        exercises: result.cwiczenia,
+                        unit: (result2[0] as { PREFEROWANA_JEDNOSTKA: string }).PREFEROWANA_JEDNOSTKA
+
+                      });
+                    }else res.status(500);
+                  }else res.status(500)
+                  
                 }else{
                   res.render("error", {
                     msg: "Ten plan treningowy jest już zakończony"

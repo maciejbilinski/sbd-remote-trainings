@@ -1,6 +1,7 @@
 <% layout('./layout', {styles: ['training'], scripts: ['form', 'rating', 'training_mode']}) %>
 <script type="text/javascript">
 const exercisesData = JSON.parse('<%~ JSON.stringify(it.exercises) %>');
+const inKG = <% if(it.unit === 'K'){ %>true<%}else{%>false<%}%>;
 </script>
 <section class="content" data-bs-theme="dark">
     <h1 class="text-left top-left">

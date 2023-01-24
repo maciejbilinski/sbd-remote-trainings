@@ -86,7 +86,7 @@ window.addEventListener('load', function(){
             if(exercise.sprzet){
                 for(const equip of exercise.sprzet){
                     if(equip.czy_rozne_obciazenie === "T"){
-                        const str = 'Obciążenie ' + equip.nazwa.toLowerCase();
+                        const str = 'Obciążenie ' + equip.nazwa.toLowerCase() + ' ' + (inKG ? '[kg]' : '[lbs]');
                         const lbl = document.createElement('label');
                         lbl.innerText = str;
                         const eqInput = document.createElement('input');
