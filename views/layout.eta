@@ -29,6 +29,43 @@
     <script type="text/javascript" src="../scripts/<%=script%>.js"></script>
     <% }) %>
     <% } %>
+    <script type="text/javascript">
+        const notificationDaysOfWeek = JSON.parse('<%~JSON.stringify(it.notification)%>').daysOfWeek;
+        window.addEventListener('load', function(){
+            function showNotification(day, hour){
+                const notification = new Notification("Przypomnienie", {
+                    body: "Przypomnienie o zbliżającym się treningu w " + day.toLowerCase() + " o godzinie " + hour,
+                    tag: day+hour
+                });
+            }
+
+            async function checkNotification(){
+                const dt = new Date();
+                const dw = dt.getDay(); // day of day
+                const hour = dt.getHours();
+                const minute = dt.getMinutes();
+                console.log(dw, hour, minute, notificationDaysOfWeek);
+                for(const day of notificationDaysOfWeek){
+                    if(day.dw === dw && day.hour === hour && day.minute === minute){
+                        if(Notification.permission === "granted"){
+                            showNotification(day.trainingDay, day.trainingHour);
+                        }
+                    }
+                }
+            }
+            checkNotification();
+            setInterval(checkNotification, 60000);
+
+            if(document.getElementById('notification'))
+                document.getElementById('notification').addEventListener('change', function(){
+                if(Notification.permission === "granted"){
+                }else if(Notification.permission !== "denied"){
+                    Notification.requestPermission().then(permission => {
+                    });
+                }
+            });
+        });
+    </script>
 </head>
 <body>
     <main>
