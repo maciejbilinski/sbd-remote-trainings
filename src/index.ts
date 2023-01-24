@@ -682,7 +682,7 @@ const bootstrap = async () => {
 
   app.post('/equipment-creator', checkLoggedIn, fileUpload(), async (req: Request, res: Response) => {
     if(req.body.name && req.body.type){
-      if(req.body.name.length > 255){
+      if(req.body.name.length <= 255){
         if(['y', 'n'].includes(req.body.type)){
           let pool, connection, result;
           try{
@@ -761,7 +761,7 @@ const bootstrap = async () => {
       }
     })
     if(req.body.name && req.body.type){
-      if(req.body.name.length > 255){
+      if(req.body.name.length <= 255){
 
         if(['y', 'n'].includes(req.body.type)){
           let pool, connection, result;
@@ -863,7 +863,7 @@ const bootstrap = async () => {
       }
     })
     if(req.body.name && req.body.privacy){
-      if(req.body.name.length > 255){
+      if(req.body.name.length <= 255){
         if(['y', 'n'].includes(req.body.privacy)){
           let pool, connection, result;
           try{
