@@ -426,8 +426,8 @@ const bootstrap = async () => {
     try {
       pool = await getPool();
       connection = await pool.getConnection();
-      result = (await connection.execute(`SELECT treningi_nazwa, data_rozpoczecia FROM plantreningowy WHERE uzytkownicy_login=:login AND data_zakonczenia `, [username], { outFormat: OUT_FORMAT_ARRAY })).rows;
-      result2 = (await connection.execute(`SELECT treningi_nazwa, data_rozpoczecia, data_zakonczenia FROM plantreningowy WHERE uzytkownicy_login=:login AND data_zakonczenia IS NOT NULL`, [username], { outFormat: OUT_FORMAT_ARRAY })).rows;
+      result = (await connection.execute(`SELECT treningi_nazwa, data_rozpoczecia FROM plantreningowy WHERE uzytkownicy_login=:login AND (data_zakonczenia IS NULL OR SYSDATE < data_zakonczenia)`, [username], { outFormat: OUT_FORMAT_ARRAY })).rows;
+      result2 = (await connection.execute(`SELECT treningi_nazwa, data_rozpoczecia, data_zakonczenia FROM plantreningowy WHERE uzytkownicy_login=:login AND (data_zakonczenia IS NOT NULL AND SYSDATE > data_zakonczenia)`, [username], { outFormat: OUT_FORMAT_ARRAY })).rows;
       if (result && result2) {
         res.render('user-training-plans', { username: username, currentPlans: result, finishedPlans: result2 });
       }
@@ -438,7 +438,6 @@ const bootstrap = async () => {
       await connection?.close();
       await pool?.close();
     }
-    res.render('user-training-plans', {username: username});
   });
 
   app.get('/equipment-search', checkLoggedIn, async (req: Request, res: Response) => {
@@ -653,6 +652,8 @@ const bootstrap = async () => {
         pool = await getPool();
         connection = await pool.getConnection();
         await connection.execute(`DELETE FROM ocenytreningow WHERE uzytkownicy_login=:login AND treningi_nazwa=:nazwa`, [username, actualTrainingName], {autoCommit: false});
+        await connection.execute(`DELETE FROM plantreningowy WHERE uzytkownicy_login=:login AND treningi_nazwa=:nazwa`, [username, actualTrainingName], { autoCommit: false });
+        await connection.execute(`DELETE FROM cwiczeniatreningi WHERE treningi_nazwa=:nazwa`, [actualTrainingName], { autoCommit: false });
         await connection.execute(`DELETE FROM treningi WHERE nazwa=:nazwa AND uzytkownicy_login=:login`, [actualTrainingName, username], { autoCommit: false });
         await connection.commit();
         res.redirect('/user-trainings');

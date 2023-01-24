@@ -57,7 +57,9 @@
         </div>
         <div style="text-align:center; margin-left: 50px;">
             <h2>Dodaj do planu treningowego</h2>
-            <input type="button" value="Kreator planu" class="btn btn-primary">
+            <a href="/training-plan-creator/new-<%= it.trainingName %>">
+                <input type="button" value="Kreator planu" class="btn btn-primary">
+            </a>
         </div>
     </div>
     
