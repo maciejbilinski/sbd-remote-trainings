@@ -7,3 +7,4 @@ files/equipment/*
 files/exercises/*
 !files/exercises
 mytodo.md
+.DS_Store
