@@ -195,15 +195,32 @@ const bootstrap = async () => {
   }
 
   // routes
-  app.get('/', (req: Request, res: Response) => {
+  app.get('/', async (req: Request, res: Response) => {
     if(process.env.STILL_LOGGED_IN == "true"){
       req.session.username = "admin"
       req.session.save();
     }
-    if(!req.session.username)
+    if(!req.session.username) {
       res.render("welcome", {});
-    else
-      res.render("cockpit", {username: req.session.username});
+    } else {
+      const username = req.session.username;
+      let pool, connection, result;
+      try {
+        pool = await getPool();
+        connection = await pool.getConnection();
+        result = (await connection.execute(`SELECT TO_CHAR(wt.data_zakonczenia, 'DAY') as DZIEN, COUNT(*) as N FROM wykonanetreningi wt JOIN plantreningowy pt ON wt.plantreningowy_id = pt.id WHERE wt.data_zakonczenia BETWEEN TRUNC(SYSDATE, 'IW') AND SYSDATE AND pt.uzytkownicy_login=:login GROUP BY TO_CHAR(wt.data_zakonczenia, 'DAY')`, [username], { outFormat: OUT_FORMAT_OBJECT })).rows;
+        if (result) {
+          res.render("cockpit", { username: username, results: result });
+        } else res.status(500);
+      } catch (err) {
+        console.error(err);
+        res.status(500);
+        res.send('Błąd wewnętrzny')
+      } finally {
+        await connection?.close();
+        await pool?.close();
+      }
+    }
   });
 
   app.get('/created/:what', checkLoggedIn, (req: Request, res: Response) => {

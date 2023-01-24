@@ -1,4 +1,8 @@
-<% layout('./layout', {styles: ['welcome', 'cockpit']}) %>
+<% layout('./layout', {styles: ['welcome', 'cockpit'], scripts: ['generate_chart']}) %>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.2.0/dist/chart.umd.min.js"></script>
+<script type="text/javascript">
+const results = JSON.parse('<%~ JSON.stringify(it.results) %>');
+</script>
 <section class="content" data-bs-theme="dark">
     <h1>Witaj <span class='regular'><%~ it.username %></span>!</h1>
     <div class="options">
@@ -18,6 +22,7 @@
             </div>
         </a>
     </div>
+    <canvas id="cockpitChart"></canvas>
     <div class="container">
         <div class="row">
             <div class="col-3"></div>
