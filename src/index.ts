@@ -420,8 +420,25 @@ const bootstrap = async () => {
     }
   });
 
-  app.get('/user-training-plans', checkLoggedIn, (req: Request, res: Response) => {
-    res.send('Plany treningowe użytkownika');
+  app.get('/user-training-plans', checkLoggedIn, async (req: Request, res: Response) => {
+    const username = req.session.username;
+    let pool, connection, result, result2;
+    try {
+      pool = await getPool();
+      connection = await pool.getConnection();
+      result = (await connection.execute(`SELECT treningi_nazwa, data_rozpoczecia FROM plantreningowy WHERE uzytkownicy_login=:login AND data_zakonczenia `, [username], { outFormat: OUT_FORMAT_ARRAY })).rows;
+      result2 = (await connection.execute(`SELECT treningi_nazwa, data_rozpoczecia, data_zakonczenia FROM plantreningowy WHERE uzytkownicy_login=:login AND data_zakonczenia IS NOT NULL`, [username], { outFormat: OUT_FORMAT_ARRAY })).rows;
+      if (result && result2) {
+        res.render('user-training-plans', { username: username, currentPlans: result, finishedPlans: result2 });
+      }
+    } catch (err) {
+      console.error(err);
+      res.status(500);
+    } finally {
+      await connection?.close();
+      await pool?.close();
+    }
+    res.render('user-training-plans', {username: username});
   });
 
   app.get('/equipment-search', checkLoggedIn, async (req: Request, res: Response) => {
@@ -598,9 +615,22 @@ const bootstrap = async () => {
       try {
         pool = await getPool();
         connection = await pool.getConnection();
-        
-        // TODO: moze trzeba usunac wiecej niz tylko z tabeli 'uzytkownicy'
-        result = (await connection.execute(`DELETE FROM uzytkownicy WHERE login=:login`, [username], { autoCommit: true }));
+        await connection.execute(`DELETE FROM ocenycwiczen WHERE uzytkownicy_login=:login`, [username], { autoCommit: false });
+        await connection.execute(`DELETE FROM ocenytreningow WHERE uzytkownicy_login=:login`, [username], { autoCommit: false });
+        await connection.execute(`DELETE FROM plantreningowy WHERE uzytkownicy_login=:login`, [username], { autoCommit: false });
+        await connection.execute(`DELETE FROM treningi WHERE uzytkownicy_login=:login AND czy_prywatny = 'T'`, [username], { autoCommit: false });
+        // bind all public trainings to a special public account '*publiczny*'
+        result = (await connection.execute(`SELECT COUNT(*) AS n FROM uzytkownicy WHERE login='*publiczny*'`, {}, { outFormat: OUT_FORMAT_OBJECT })).rows;
+        if (result) {
+          if (result[0]) {
+            if ((result[0] as { N: number }).N === 0) {
+              await connection.execute(`INSERT INTO uzytkownicy (login, preferowana_jednostka) VALUES ('*publiczny*', 'K')`, {}, { autoCommit: false });
+            }
+            await connection.execute(`UPDATE treningi SET uzytkownicy_login='*publiczny*' WHERE uzytkownicy_login=:login AND czy_prywatny = 'N'`, [username], { autoCommit: false });
+          }
+        }
+        await connection.execute(`DELETE FROM uzytkownicy WHERE login=:login`, [username], { autoCommit: false });
+        await connection.commit();
       } catch (err) {
         console.error(err);
         res.status(500);

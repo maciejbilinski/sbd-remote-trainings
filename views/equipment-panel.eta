@@ -12,7 +12,7 @@
     </div>
     <h1><% =it.equipmentName %></h1>
     <% if (it.hasImage == 'T') { %>
-    <img src="" alt="<%= it.equipmentName %>">
+    <img src="/files/equipment/<%= it.equipmentName %>.png" alt="<%= it.equipmentName %>">
     <% } else { %>
     <h2>Dodaj zdjęcie</h2>
     <input type="button" value="Dodaj" class="btn btn-primary">
