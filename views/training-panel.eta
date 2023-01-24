@@ -1,14 +1,22 @@
-<% layout('./layout', {styles: ['welcome', 'cockpit' ], scripts: ['search']}) %>
+<% layout('./layout', {styles: ['welcome', 'cockpit' ]}) %>
 <section class="content" data-bs-theme="dark">
     <% if (it.gradeSuccess) { %>
         <div class="alert alert-success" role="alert">Pomyślnie oceniono trening.</div>
         <% } %>
     <div class="sub-options">
+    <% if (!it.fromUserTrainings) { %>
         <a href="/training-search">
             <div class="flex-option">
                 <span class="material-symbols-outlined">arrow_back</span><span>Powrót do wyszukiwarki</span>
             </div>
         </a>
+    <% } else { %>
+        <a href="/user-trainings">
+            <div class="flex-option">
+                <span class="material-symbols-outlined">arrow_back</span><span>Powrót do Twoich treningów</span>
+            </div>
+        </a>
+    <% } %>
     </div>
     <h1><% =it.trainingName %></h1>
     <h2>Autor treningu: <% =it.trainingAuthor %></h2>
@@ -49,7 +57,9 @@
         </div>
         <div style="text-align:center; margin-left: 50px;">
             <h2>Dodaj do planu treningowego</h2>
-            <input type="button" value="Kreator planu" class="btn btn-primary">
+            <a href="/training-plan-creator/new-<%= it.trainingName %>">
+                <input type="button" value="Kreator planu" class="btn btn-primary">
+            </a>
         </div>
     </div>
     

@@ -378,7 +378,7 @@ const bootstrap = async () => {
                 const intensywnosc = result2[0][2 as keyof typeof result2[0]];
                 res.render('training-panel', { username: username, trainingName: trainingName, trainingAuthor: trainingAuthor, skutecznosc: skutecznosc, trudnosc: trudnosc, intensywnosc: intensywnosc, wasGraded: true });
               } else {
-                  res.render('training-panel', { username: username, trainingName: trainingName, trainingAuthor: trainingAuthor });
+                res.render('training-panel', { username: username, trainingName: trainingName, trainingAuthor: trainingAuthor });
               }
             }
           } else {
@@ -433,7 +433,7 @@ const bootstrap = async () => {
                 const intensywnosc = result2[0][2 as keyof typeof result2[0]];
                 res.render('exercise-panel', { username: username, exerciseName: exerciseName, cenaSprzetu: cenaSprzetu, trudnosc: trudnosc, intensywnosc: intensywnosc, wasGraded: true });
               } else {
-                  res.render('exercise-panel', { username: username, exerciseName: exerciseName});
+                res.render('exercise-panel', { username: username, exerciseName: exerciseName});
               }
             }
           } else {
@@ -450,12 +450,70 @@ const bootstrap = async () => {
     }
   });
 
-  app.get('/user-trainings', checkLoggedIn, (req: Request, res: Response) => {
-    res.send('Treningi użytkownika');
+  app.get('/user-trainings', checkLoggedIn, async (req: Request, res: Response) => {
+    const username = req.session.username;
+    let pool, connection, result, result2;
+    try {
+      pool = await getPool();
+      connection = await pool.getConnection();
+      result = (await connection.execute(`SELECT nazwa FROM treningi WHERE czy_prywatny = 'N' AND uzytkownicy_login=:login`, [username], { outFormat: OUT_FORMAT_ARRAY })).rows;
+      result2 = (await connection.execute(`SELECT nazwa FROM treningi WHERE czy_prywatny = 'T' AND uzytkownicy_login=:login`, [username], { outFormat: OUT_FORMAT_ARRAY })).rows;
+      if (result && result2) {
+        res.render('user-trainings', { username: username, tablePublic: result, tablePrivate: result2 });
+      }
+    } catch (err) {
+      console.error(err);
+      res.status(500);
+    } finally {
+      await connection?.close();
+      await pool?.close();
+    }
   });
 
-  app.get('/user-training-plans', checkLoggedIn, (req: Request, res: Response) => {
-    res.send('Plany treningowe użytkownika');
+  app.get('/delete-training', checkLoggedIn, async (req: Request, res: Response) => {
+    const username = req.session.username;
+    const trainingName = req.query.name;
+    let pool, connection, result;
+    try {
+      pool = await getPool();
+      connection = await pool.getConnection();
+      result = (await connection.execute(`SELECT COUNT(*) AS n FROM treningi WHERE nazwa=:nazwa AND uzytkownicy_login=:login AND czy_prywatny='T'`, [trainingName, username], { outFormat: OUT_FORMAT_OBJECT })).rows;
+      if (result) {
+        if (result[0]) {
+          if ((result[0] as { N: number }).N === 1) {
+            res.render('delete-training', {username: username, trainingName: trainingName });
+          } else {
+            res.redirect('/');
+          }
+        }
+      } 
+    } catch (err) {
+      console.error(err);
+      res.status(500);
+    } finally {
+      await connection?.close();
+      await pool?.close();
+    }
+  });
+
+  app.get('/user-training-plans', checkLoggedIn, async (req: Request, res: Response) => {
+    const username = req.session.username;
+    let pool, connection, result, result2;
+    try {
+      pool = await getPool();
+      connection = await pool.getConnection();
+      result = (await connection.execute(`SELECT id, treningi_nazwa, TO_CHAR(data_rozpoczecia, 'DD-MM-YYYY'), TO_CHAR(data_zakonczenia, 'DD-MM-YYYY') FROM plantreningowy WHERE uzytkownicy_login=:login AND (data_zakonczenia IS NULL OR SYSDATE < data_zakonczenia)`, [username], { outFormat: OUT_FORMAT_ARRAY })).rows;
+      result2 = (await connection.execute(`SELECT id, treningi_nazwa, TO_CHAR(data_rozpoczecia, 'DD-MM-YYYY'), TO_CHAR(data_zakonczenia, 'DD-MM-YYYY') FROM plantreningowy WHERE uzytkownicy_login=:login AND (data_zakonczenia IS NOT NULL AND SYSDATE > data_zakonczenia)`, [username], { outFormat: OUT_FORMAT_ARRAY })).rows;
+      if (result && result2) {
+        res.render('user-training-plans', { username: username, currentPlans: result, finishedPlans: result2 });
+      }
+    } catch (err) {
+      console.error(err);
+      res.status(500);
+    } finally {
+      await connection?.close();
+      await pool?.close();
+    }
   });
 
   app.get('/equipment-search', checkLoggedIn, async (req: Request, res: Response) => {
@@ -476,8 +534,36 @@ const bootstrap = async () => {
     }
   });
 
-  app.get('/equipment-panel', checkLoggedIn, (req: Request, res: Response) => {
-    res.send('Nazwa sprzętu: ' + req.query.name);
+  app.get('/equipment-panel', checkLoggedIn, async (req: Request, res: Response) => {
+    const equipmentName = req.query.name;
+    let pool, connection, result, result2;
+    try {
+      pool = await getPool();
+      connection = await pool.getConnection();
+      result = (await connection.execute(`SELECT COUNT(*) AS n FROM sprzet WHERE nazwa=:nazwa`, [equipmentName], { outFormat: OUT_FORMAT_OBJECT })).rows;
+      if (result) {
+        if (result[0]) {
+          if ((result[0] as { N: number }).N === 1) {
+            result2 = (await connection.execute(`SELECT ma_zdjecie, czy_rozne_obciazenie FROM sprzet WHERE nazwa=:nazwa`, [equipmentName], { outFormat: OUT_FORMAT_ARRAY})).rows;
+            if (result2) {
+              if (result2[0]) {
+                const hasImage = result2[0][0 as keyof typeof result2[0]];
+                const hasDifferentWeight = result2[0][1 as keyof typeof result2[0]];
+                res.render('equipment-panel', { equipmentName: equipmentName, hasImage: hasImage, hasDifferentWeight: hasDifferentWeight });
+              }
+            }
+          } else {
+            res.redirect('/');
+          }
+        }
+      }
+    } catch (err) {
+      console.error(err);
+      res.status(500);
+    } finally {
+      await connection?.close();
+      await pool?.close();
+    }
   });
 
   app.get('/account-settings', checkLoggedIn, async (req: Request, res: Response) => {
@@ -667,9 +753,49 @@ const bootstrap = async () => {
       try {
         pool = await getPool();
         connection = await pool.getConnection();
-        
-        // TODO: moze trzeba usunac wiecej niz tylko z tabeli 'uzytkownicy'
-        result = (await connection.execute(`DELETE FROM uzytkownicy WHERE login=:login`, [username], { autoCommit: true }));
+        await connection.execute(`DELETE FROM ocenycwiczen WHERE uzytkownicy_login=:login`, [username], { autoCommit: false });
+        await connection.execute(`DELETE FROM ocenytreningow WHERE uzytkownicy_login=:login`, [username], { autoCommit: false });
+        await connection.execute(`DELETE FROM plantreningowy WHERE uzytkownicy_login=:login`, [username], { autoCommit: false });
+        await connection.execute(`DELETE FROM treningi WHERE uzytkownicy_login=:login AND czy_prywatny = 'T'`, [username], { autoCommit: false });
+        // bind all public trainings to a special public account '*publiczny*'
+        result = (await connection.execute(`SELECT COUNT(*) AS n FROM uzytkownicy WHERE login='*publiczny*'`, {}, { outFormat: OUT_FORMAT_OBJECT })).rows;
+        if (result) {
+          if (result[0]) {
+            if ((result[0] as { N: number }).N === 0) {
+              await connection.execute(`INSERT INTO uzytkownicy (login, preferowana_jednostka) VALUES ('*publiczny*', 'K')`, {}, { autoCommit: false });
+            }
+            await connection.execute(`UPDATE treningi SET uzytkownicy_login='*publiczny*' WHERE uzytkownicy_login=:login AND czy_prywatny = 'N'`, [username], { autoCommit: false });
+          }
+        }
+        await connection.execute(`DELETE FROM uzytkownicy WHERE login=:login`, [username], { autoCommit: false });
+        await connection.commit();
+      } catch (err) {
+        console.error(err);
+        res.status(500);
+      } finally {
+        await connection?.close();
+        await pool?.close();
+      }
+    }
+  });
+
+  app.post('/delete-training', checkLoggedIn, async (req: Request, res: Response) => {
+    const username = req.session.username;
+    const typedTrainingName = req.body.typed_training_name;
+    const actualTrainingName = req.body.actual_training_name;
+    if (typedTrainingName !== actualTrainingName) {
+      res.render('delete-training', { username: username, trainingName: actualTrainingName, incorrectTypedTrainingName: true });
+    } else {
+      let pool, connection;
+      try {
+        pool = await getPool();
+        connection = await pool.getConnection();
+        await connection.execute(`DELETE FROM ocenytreningow WHERE uzytkownicy_login=:login AND treningi_nazwa=:nazwa`, [username, actualTrainingName], {autoCommit: false});
+        await connection.execute(`DELETE FROM plantreningowy WHERE uzytkownicy_login=:login AND treningi_nazwa=:nazwa`, [username, actualTrainingName], { autoCommit: false });
+        await connection.execute(`DELETE FROM cwiczeniatreningi WHERE treningi_nazwa=:nazwa`, [actualTrainingName], { autoCommit: false });
+        await connection.execute(`DELETE FROM treningi WHERE nazwa=:nazwa AND uzytkownicy_login=:login`, [actualTrainingName, username], { autoCommit: false });
+        await connection.commit();
+        res.redirect('/user-trainings');
       } catch (err) {
         console.error(err);
         res.status(500);

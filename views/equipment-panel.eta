@@ -1,0 +1,24 @@
+<% layout('./layout', {styles: ['welcome', 'cockpit' ]}) %>
+<section class="content" data-bs-theme="dark">
+    <% if (it.addImageSuccess) { %>
+        <div class="alert alert-success" role="alert">Pomyślnie dodano zdjęcie.</div>
+        <% } %>
+    <div class="sub-options">
+        <a href="/equipment-search">
+            <div class="flex-option">
+                <span class="material-symbols-outlined">arrow_back</span><span>Powrót do wyszukiwarki</span>
+            </div>
+        </a>
+    </div>
+    <h1><% =it.equipmentName %></h1>
+    <% if (it.hasImage == 'T') { %>
+    <img src="/files/equipment/<%= it.equipmentName %>.png" alt="<%= it.equipmentName %>">
+    <% } else { %>
+    <h2>Dodaj zdjęcie</h2>
+    <input type="button" value="Dodaj" class="btn btn-primary">
+    <% } %>
+    <% if (it.hasDifferentWeight == 'T') { %>
+    <br>
+    <p><i>różne obciążenie</i></p>
+    <% } %>
+</section>

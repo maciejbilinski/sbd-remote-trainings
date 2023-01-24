@@ -1,0 +1,69 @@
+<% layout('./layout', {styles: ['welcome', 'cockpit']}) %>
+<section class="content" data-bs-theme="dark">
+    <div class="sub-options">
+        <a href="/">
+            <div class="flex-option">
+                <span class="material-symbols-outlined">arrow_back</span><span>Powrót do kokpitu</span>
+            </div>
+        </a>
+    </div>
+    <h1>Twoje plany treningowe</h1>
+    <p>Tutaj możesz zobaczyć wszystkie Twoje plany treningowe, w tym obecnie trwające i zakończone.</p>
+    <details class="show-hide-widget" open>
+        <summary class="show-hide-widget-name"><h2>Aktualne plany treningowe</h2></summary>
+        <div class="form-container">
+            <table class="table table-dark table-bordered table-hover">
+                <thead>
+                    <tr>
+                        <th scope="col">#</th>
+                        <th scope="col">Nazwa planu</th>
+                        <th scope="col">Data rozpoczęcia</th>
+                        <th scope="col">Data zakończenia</th>
+                        <th scope="col">Edycja</th>
+                        <th scope="col">Rozpocznij</th>
+                    </tr> 
+                </thead>
+                <tbody>
+                    <% if(it.currentPlans) {%>
+                    <% it.currentPlans.forEach((col, n) => { %>
+                        <tr>
+                            <td><%= n+1 %></td>
+                            <td><%= col[1] %></td>
+                            <td><%= col[2] %></td>
+                            <td><% if (col[3] !== null) { %><%= col[3] %><%}%></td>
+                            <td><a href="/training-plan-creator/modify-<%= col[0] %>"><span class="material-symbols-outlined">edit</span></a></td>
+                            <td><span class="material-symbols-outlined">arrow_circle_right</span></td>
+                        </tr>
+                    <% })} %>
+                </tbody>
+            </table>
+        </div>
+    </details>
+    <br>
+    <details class="show-hide-widget">
+        <summary class="show-hide-widget-name"><h2>Zakończone plany treningowe</h2></summary>
+        <div class="form-container">
+            <table class="table table-dark table-bordered table-hover">
+                <thead>
+                    <tr>
+                        <th scope="col">#</th>
+                        <th scope="col">Nazwa planu</th>
+                        <th scope="col">Data rozpoczęcia</th>
+                        <th scope="col">Data zakończenia</th>
+                    </tr> 
+                </thead>
+                <tbody>
+                    <% if(it.finishedPlans) {%>
+                    <% it.finishedPlans.forEach((col, n) => { %>
+                        <tr>
+                            <td><%= n+1 %></td>
+                            <td><%= col[1] %></td>
+                            <td><%= col[2] %></td>
+                            <td><%= col[3] %></td>
+                        </tr>
+                    <% })} %>
+                </tbody>
+            </table>
+        </div>
+    </details>
+</section>
