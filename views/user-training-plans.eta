@@ -10,7 +10,7 @@
     <h1>Twoje plany treningowe</h1>
     <p>Tutaj możesz zobaczyć wszystkie Twoje plany treningowe, w tym obecnie trwające i zakończone.</p>
     <details class="show-hide-widget" open>
-        <summary class="show-hide-widget-name"><h2>Trwające plany treningowe</h2></summary>
+        <summary class="show-hide-widget-name"><h2>Aktualne plany treningowe</h2></summary>
         <div class="form-container">
             <table class="table table-dark table-bordered table-hover">
                 <thead>
@@ -18,6 +18,9 @@
                         <th scope="col">#</th>
                         <th scope="col">Nazwa planu</th>
                         <th scope="col">Data rozpoczęcia</th>
+                        <th scope="col">Data zakończenia</th>
+                        <th scope="col">Edycja</th>
+                        <th scope="col">Rozpocznij</th>
                     </tr> 
                 </thead>
                 <tbody>
@@ -25,8 +28,11 @@
                     <% it.currentPlans.forEach((col, n) => { %>
                         <tr>
                             <td><%= n+1 %></td>
-                            <td><%= col[0] %></td>
                             <td><%= col[1] %></td>
+                            <td><%= col[2] %></td>
+                            <td><% if (col[3] !== null) { %><%= col[3] %><%}%></td>
+                            <td><a href="/training-plan-creator/modify-<%= col[0] %>"><span class="material-symbols-outlined">edit</span></a></td>
+                            <td><span class="material-symbols-outlined">arrow_circle_right</span></td>
                         </tr>
                     <% })} %>
                 </tbody>
@@ -51,9 +57,9 @@
                     <% it.finishedPlans.forEach((col, n) => { %>
                         <tr>
                             <td><%= n+1 %></td>
-                            <td><%= col[0] %></td>
                             <td><%= col[1] %></td>
                             <td><%= col[2] %></td>
+                            <td><%= col[3] %></td>
                         </tr>
                     <% })} %>
                 </tbody>

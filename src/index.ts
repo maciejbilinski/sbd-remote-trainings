@@ -426,8 +426,8 @@ const bootstrap = async () => {
     try {
       pool = await getPool();
       connection = await pool.getConnection();
-      result = (await connection.execute(`SELECT treningi_nazwa, data_rozpoczecia FROM plantreningowy WHERE uzytkownicy_login=:login AND (data_zakonczenia IS NULL OR SYSDATE < data_zakonczenia)`, [username], { outFormat: OUT_FORMAT_ARRAY })).rows;
-      result2 = (await connection.execute(`SELECT treningi_nazwa, data_rozpoczecia, data_zakonczenia FROM plantreningowy WHERE uzytkownicy_login=:login AND (data_zakonczenia IS NOT NULL AND SYSDATE > data_zakonczenia)`, [username], { outFormat: OUT_FORMAT_ARRAY })).rows;
+      result = (await connection.execute(`SELECT id, treningi_nazwa, TO_CHAR(data_rozpoczecia, 'DD-MM-YYYY'), TO_CHAR(data_zakonczenia, 'DD-MM-YYYY') FROM plantreningowy WHERE uzytkownicy_login=:login AND (data_zakonczenia IS NULL OR SYSDATE < data_zakonczenia)`, [username], { outFormat: OUT_FORMAT_ARRAY })).rows;
+      result2 = (await connection.execute(`SELECT id, treningi_nazwa, TO_CHAR(data_rozpoczecia, 'DD-MM-YYYY'), TO_CHAR(data_zakonczenia, 'DD-MM-YYYY') FROM plantreningowy WHERE uzytkownicy_login=:login AND (data_zakonczenia IS NOT NULL AND SYSDATE > data_zakonczenia)`, [username], { outFormat: OUT_FORMAT_ARRAY })).rows;
       if (result && result2) {
         res.render('user-training-plans', { username: username, currentPlans: result, finishedPlans: result2 });
       }
