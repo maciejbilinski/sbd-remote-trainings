@@ -142,6 +142,7 @@ CREATE TABLE obciazenia (
     obciazenie                            NUMBER NOT NULL CHECK (obciazenie >= 0), 
     wykonanecwiczenia_id NUMBER(38) PRIMARY KEY, 
     sprzet_nazwa                          VARCHAR2(256) NOT NULL,
+    PRIMARY KEY (wykonanecwiczenia_id, sprzet_nazwa),
     FOREIGN KEY (wykonanecwiczenia_id) REFERENCES wykonanecwiczenia(id),
     FOREIGN KEY (sprzet_nazwa) REFERENCES sprzet(nazwa)
 );

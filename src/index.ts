@@ -47,7 +47,51 @@ FROM
   plantreningowy p
 WHERE 
   p.id = :id
-`
+`;
+
+const stillhardquery = `
+SELECT
+    NVL(json_objectagg(
+          wc.cwiczenia_nazwa VALUE json_arrayagg(
+              json_object(
+                  'seria' VALUE wc.seria,
+                  'wysilek' VALUE wc.wysilek,
+                  'obciazenia' VALUE (
+                      SELECT
+                          json_arrayagg(
+                              json_object(
+                                  'obciazenie' VALUE o.obciazenie,
+                                  'sprzet' VALUE o.sprzet_nazwa
+                              )
+                          )
+                      FROM 
+                          obciazenia o    
+                      WHERE
+                          o.wykonanecwiczenia_id IN wc.id
+                  )
+              )    
+          )
+      ), '{}'
+    )
+FROM
+    wykonanecwiczenia wc
+GROUP BY
+    wc.wykonanetreningi_id, wc.cwiczenia_nazwa
+HAVING
+    wc.wykonanetreningi_id = (
+        SELECT 
+            wt.id 
+        FROM 
+            wykonanetreningi wt 
+        WHERE 
+                wt.plantreningowy_id = :1
+            AND 
+                wt.data_zakonczenia IS NOT NULL 
+        ORDER BY 
+            wt.data_zakonczenia DESC 
+        FETCH FIRST 1 ROWS ONLY
+)`;
+
 function padTo2Digits(num: number) {
   return num.toString().padStart(2, '0');
 }
@@ -627,11 +671,22 @@ const bootstrap = async () => {
                   ],{ outFormat: OUT_FORMAT_OBJECT })).rows;
                   if (result2) {
                     if (result2[0]) {
-                      res.render("training_mode", {
-                        exercises: result.cwiczenia,
-                        unit: (result2[0] as { PREFEROWANA_JEDNOSTKA: string }).PREFEROWANA_JEDNOSTKA
-
-                      });
+                      result3 = (await connection.execute(stillhardquery, [
+                        req.params.id
+                      ], { outFormat: OUT_FORMAT_ARRAY })).rows;
+                      if(result3){
+                        if(result3[0]){
+                          result3 = (result3 as string[][])[0]
+                          if(result3[0]){
+                            result3 = JSON.parse(result3[0]);
+                            res.render("training_mode", {
+                              exercises: result.cwiczenia,
+                              unit: (result2[0] as { PREFEROWANA_JEDNOSTKA: string }).PREFEROWANA_JEDNOSTKA,
+                              prev: result3
+                            });
+                          }else res.status(500);
+                        }else res.status(500);
+                      }else res.status(500);
                     }else res.status(500);
                   }else res.status(500)
                   

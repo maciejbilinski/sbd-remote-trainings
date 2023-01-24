@@ -39,6 +39,20 @@ const inKG = <% if(it.unit === 'K'){ %>true<%}else{%>false<%}%>;
                         </video>
                         <br>
                         <% } %>
+                        <% if(it.prev[ex.nazwa]){%>
+                        <h3>Poprzednio</h3>
+                        <ul>
+                        <% it.prev[ex.nazwa].forEach(function(series){%>
+                            <li>
+                                Seria <%= series.seria%>: 
+                                <%= series.wysilek %><% if(ex.czy_powtorzeniowe === 'T'){ %>razy<% }else{%>s<% }%>
+                                <% if(series.obciazenia !== null){ %>
+                                [<% series.obciazenia.forEach(function(weight, index){%><%= weight.sprzet %> <%= weight.obciazenie%><% if(it.unit === 'K'){ %>kg<%}else{%>lbs<%}%><%if(index < (series.obciazenia.length-1)){%>, <%}%><%})%>]
+                                <% } %>
+                            </li>
+                        <% }) %>
+                        </ul>
+                        <% } %>
                         <button type="button" class="btn btn-primary add-series" ex="<%= encodeURI(ex.nazwa) %>" style="margin-top: 5px;">
                             Dodaj serię
                         </button>
