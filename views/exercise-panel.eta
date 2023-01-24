@@ -1,4 +1,4 @@
-<% layout('./layout', {styles: ['welcome', 'cockpit']}) %>
+<% layout('./layout', {styles: ['welcome', 'cockpit'], scripts: ['form']}) %>
 <section class="content" data-bs-theme="dark">
     <% if (it.gradeSuccess) { %>
         <div class="alert alert-success" role="alert">Pomyślnie oceniono ćwiczenie.</div>
@@ -46,8 +46,20 @@
             </div>
         </div>
         <div style="text-align:center; margin-left: 50px;">
+        <% if(it.exerciseVideo === 'N'){ %>
             <h2>Dodaj instruktaż</h2>
-            <input type="button" value="Dodaj" class="btn btn-primary">
+            <form id="add-video-form" ajax-form enctype="multipart/form-data" action="/add-video">
+                <input type="hidden" name="name" value="<% =it.exerciseName %>">
+                <input type="file" class="form-control-file" id="video" name="video" accept="video/mp4">
+                <br>
+                <input type="submit" value="Dodaj" class="btn btn-primary" form-submit>
+                <p class="error" form-error style="margin:0;"></p>
+            </form>
+        <% }else{ %>
+            <video controls>
+                <source src="/files/exercises/<%= it.exerciseName %>.mp4" type="video/mp4">
+            </video>
+        <% }%>
         </div>
     </div>
     

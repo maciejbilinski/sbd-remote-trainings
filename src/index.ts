@@ -504,26 +504,27 @@ const bootstrap = async () => {
     try {
       pool = await getPool();
       connection = await pool.getConnection();
-      result = (await connection.execute(`SELECT COUNT(*) AS n FROM cwiczenia WHERE nazwa=:nazwa`, [exerciseName], { outFormat: OUT_FORMAT_OBJECT })).rows;
+      result = (await connection.execute(`SELECT ma_instruktaz FROM cwiczenia WHERE nazwa=:nazwa`, [exerciseName], { outFormat: OUT_FORMAT_OBJECT })).rows;
       if (result) {
-        if (result[0]) {
-          if ((result[0] as { N: number }).N === 1) {
-            result2 = (await connection.execute(`SELECT cena_sprzetu, trudnosc, intensywnosc FROM ocenycwiczen WHERE cwiczenia_nazwa=:nazwa AND uzytkownicy_login=:login AND (SELECT COUNT(*) FROM ocenycwiczen WHERE cwiczenia_nazwa=:nazwa AND uzytkownicy_login=:login) = 1`, [exerciseName, username], { outFormat: OUT_FORMAT_ARRAY })).rows;
-            if (result2) {
-              if (result2[0]) {
-                const cenaSprzetu = result2[0][0 as keyof typeof result2[0]];
-                const trudnosc = result2[0][1 as keyof typeof result2[0]];
-                const intensywnosc = result2[0][2 as keyof typeof result2[0]];
-                res.render('exercise-panel', { username: username, notification: (req as any).notification, exerciseName: exerciseName, cenaSprzetu: cenaSprzetu, trudnosc: trudnosc, intensywnosc: intensywnosc, wasGraded: true });
-              } else {
-                res.render('exercise-panel', { username: username, notification: (req as any).notification, exerciseName: exerciseName});
-              }
+        if (result.length > 0) {
+          result = result[0] as any;
+          result2 = (await connection.execute(`SELECT cena_sprzetu, trudnosc, intensywnosc FROM ocenycwiczen WHERE cwiczenia_nazwa=:nazwa AND uzytkownicy_login=:login AND (SELECT COUNT(*) FROM ocenycwiczen WHERE cwiczenia_nazwa=:nazwa AND uzytkownicy_login=:login) = 1`, [exerciseName, username], { outFormat: OUT_FORMAT_ARRAY })).rows;
+          if (result2) {
+            if (result2[0]) {
+              const cenaSprzetu = result2[0][0 as keyof typeof result2[0]];
+              const trudnosc = result2[0][1 as keyof typeof result2[0]];
+              const intensywnosc = result2[0][2 as keyof typeof result2[0]];
+              res.render('exercise-panel', { exerciseVideo: result.MA_INSTRUKTAZ, username: username, notification: (req as any).notification, exerciseName: exerciseName, cenaSprzetu: cenaSprzetu, trudnosc: trudnosc, intensywnosc: intensywnosc, wasGraded: true });
+            } else {
+              res.render('exercise-panel', { exerciseVideo: result.MA_INSTRUKTAZ, username: username, notification: (req as any).notification, exerciseName: exerciseName});
             }
-          } else {
-            res.redirect('/');
           }
-        }
-      }
+        }else res.render('error', {
+          msg: 'Nie ma takiego ćwiczenia w bazie danych',
+          notification: (req as any).notification,
+
+        })
+      }else res.sendStatus(500);
     } catch (err) {
       console.error(err);
       res.sendStatus(500);
@@ -900,7 +901,7 @@ const bootstrap = async () => {
     }
   });
 
-  app.post('/equipment-creator', checkLoggedIn, fileUpload(), async (req: Request, res: Response) => {
+  app.post('/equipment-creator', checkLoggedIn, fileUpload({limits:{fileSize: 100000000}}), async (req: Request, res: Response) => {
     if(req.body.name && req.body.type){
       if(req.body.name.length <= 255){
         if(['y', 'n'].includes(req.body.type)){
@@ -973,7 +974,7 @@ const bootstrap = async () => {
     }
   });
 
-  app.post('/exercise-creator', checkLoggedIn, fileUpload(), async (req: Request, res: Response) => {
+  app.post('/exercise-creator', checkLoggedIn, fileUpload({limits:{fileSize: 100000000}}), async (req: Request, res: Response) => {
     var equipment: string[] = [];
     Object.keys(req.body).forEach((key) => {
       if(key.startsWith("equipment-")){
@@ -1067,6 +1068,42 @@ const bootstrap = async () => {
         res.json({
           error: "Za długa nazwa!"
         });
+      }
+    }else{
+      res.json({
+        error: "Nie wypełniono obowiązkowych pól!"
+      });
+    }
+  });
+
+  app.post('/add-video', checkLoggedIn, fileUpload({limits:{fileSize: 100000000}}), async (req: Request, res: Response) => {
+    if(req.body.name && req.files?.video){
+      let pool, connection, result;
+      try{
+        const video = (req.files.video as UploadedFile);
+        const ext = getExtension(video.name);
+        if(!['mp4'].includes(ext)){
+          res.json({
+            error: "Niepoprawny format instruktażu! Dozwolone to: 'mp4'."
+          });
+        }else{
+          video.mv(path.join(__dirname, '..', 'files', 'exercises', req.body.name+"."+ext))
+          pool = await getPool();
+          connection = await pool.getConnection();
+          result = await connection.execute(`UPDATE cwiczenia SET ma_instruktaz='T' WHERE nazwa=:nazwa`, [req.body.name], {autoCommit: true});
+          return res.json({
+            success: true
+          })
+        }
+      }catch(err){
+        console.error(err);
+        res.sendStatus(500);   
+        res.json({
+          error: 'Błąd wewnętrzny'
+        })       
+      }finally{
+        await connection?.close();
+        await pool?.close();
       }
     }else{
       res.json({

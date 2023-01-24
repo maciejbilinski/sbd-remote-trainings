@@ -122,4 +122,15 @@ window.addEventListener('load', function(){
         }
         
     }
+
+    const addVideo = document.querySelector('#add-video-form');
+    if(addVideo){
+        addVideo.onAdd = function(e){
+            const parent = addVideo.parentNode;
+            parent.innerHTML = `
+            <video controls>
+                <source src="/files/exercises/${addVideo.querySelector('input[name=\'name\']').value}.mp4" type="video/mp4">
+            </video>`
+        }
+    }
 });
