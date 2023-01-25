@@ -24,7 +24,7 @@
         <div>
             <h2>Oceń trening</h2>
             <div class="form-container">
-                <form action="/training-panel?name=<% =it.trainingName %>&author=<%=it.trainingAuthor %>" method="POST">
+                <form action="/training-panel?name=<% =it.trainingName %>&author=<%=it.trainingAuthor %><% if (it.fromUserTrainings) { %>&fromUserTrainings=true<%}%>" method="POST">
                     <input type="hidden" name="trainingName" value="<% =it.trainingName %>">
                     <input type="hidden" name="trainingAuthor" value="<% =it.trainingAuthor %>">
                     <label for="skutecznosc" class="form-check-label"><sup class="red">*</sup>Skuteczność</label>

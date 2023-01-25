@@ -451,6 +451,7 @@ const bootstrap = async () => {
     const trainingName = req.query.name;
     const trainingAuthor = req.query.author;
     const username = req.session.username;
+    const fromUserTrainings = req.query.fromUserTrainings;
     let pool, connection, result, result2;
     try {
       pool = await getPool();
@@ -465,9 +466,9 @@ const bootstrap = async () => {
                 const skutecznosc = result2[0][0 as keyof typeof result2[0]];
                 const trudnosc = result2[0][1 as keyof typeof result2[0]];
                 const intensywnosc = result2[0][2 as keyof typeof result2[0]];
-                res.render('training-panel', { username: username, notification: (req as any).notification, trainingName: trainingName, trainingAuthor: trainingAuthor, skutecznosc: skutecznosc, trudnosc: trudnosc, intensywnosc: intensywnosc, wasGraded: true });
+                res.render('training-panel', { username: username, notification: (req as any).notification, trainingName: trainingName, trainingAuthor: trainingAuthor, skutecznosc: skutecznosc, trudnosc: trudnosc, intensywnosc: intensywnosc, wasGraded: true, fromUserTrainings: fromUserTrainings });
               } else {
-                res.render('training-panel', { username: username, notification: (req as any).notification, trainingName: trainingName, trainingAuthor: trainingAuthor });
+                res.render('training-panel', { username: username, notification: (req as any).notification, trainingName: trainingName, trainingAuthor: trainingAuthor, fromUserTrainings: fromUserTrainings });
               }
             }
           } else {
@@ -1485,6 +1486,7 @@ const bootstrap = async () => {
   });
 
   app.post('/training-panel', checkLoggedIn, async (req: Request, res: Response) => {
+    const fromUserTrainings = req.query.fromUserTrainings;
     const trainingName = req.body.trainingName;
     const trainingAuthor = req.body.trainingAuthor;
     const username = req.session.username;
@@ -1496,7 +1498,7 @@ const bootstrap = async () => {
       pool = await getPool();
       connection = await pool.getConnection();
       await connection.execute(`INSERT INTO ocenytreningow VALUES (:skutecznosc, :trudnosc, :intensywnosc, :login, :nazwa)`, [skutecznosc, trudnosc, intensywnosc, username, trainingName], {autoCommit: true});
-      res.render('training-panel', {username: username, notification: (req as any).notification, trainingName: trainingName, trainingAuthor: trainingAuthor, gradeSuccess: true, skutecznosc: skutecznosc, trudnosc: trudnosc, intensywnosc: intensywnosc, wasGraded: true});
+      res.render('training-panel', {username: username, notification: (req as any).notification, trainingName: trainingName, trainingAuthor: trainingAuthor, gradeSuccess: true, skutecznosc: skutecznosc, trudnosc: trudnosc, intensywnosc: intensywnosc, wasGraded: true, fromUserTrainings: fromUserTrainings});
     } catch (err) {
       console.error(err);
       res.sendStatus(500);
