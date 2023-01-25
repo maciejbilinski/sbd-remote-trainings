@@ -140,7 +140,7 @@ CREATE INDEX wykonanecwiczenia_idx ON wykonanecwiczenia (wykonanetreningi_id);
 
 CREATE TABLE obciazenia (
     obciazenie                            NUMBER NOT NULL CHECK (obciazenie >= 0), 
-    wykonanecwiczenia_id NUMBER(38) PRIMARY KEY, 
+    wykonanecwiczenia_id                  NUMBER(38) NOT NULL, 
     sprzet_nazwa                          VARCHAR2(256) NOT NULL,
     PRIMARY KEY (wykonanecwiczenia_id, sprzet_nazwa),
     FOREIGN KEY (wykonanecwiczenia_id) REFERENCES wykonanecwiczenia(id),
