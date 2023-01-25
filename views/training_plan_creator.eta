@@ -11,6 +11,7 @@
         else if(value === 'ND') return 'Niedziela';
         else return "?";
     }
+    const daysOfWeek = ['PN', 'WT', 'SR', 'CZ', 'PT', 'SB', 'ND'];
 %>
 <section class="content" data-bs-theme="light">
     <h1 class="text-center">
@@ -26,7 +27,7 @@
             <div class="container list-container" id="days-container">
                 <% if(it.days) {%>
                 <% it.days.forEach((e, index) => { %>
-                <div class="list-item" item-id="<%=index%>">
+                <div class="list-item" item-id="<%=index%>" dow-index="<%=daysOfWeek.indexOf(e[0])%>" hour-value="<%=e[5]%>">
                     <input type="hidden" name="days[<%=index%>][dow]" value="<%= e[0] %>">
                     <input type="hidden" name="days[<%=index%>][hour]" value="<%= e[1] %>">
                     <%if(e[2]){%>  

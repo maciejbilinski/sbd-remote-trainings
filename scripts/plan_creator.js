@@ -117,8 +117,34 @@ window.addEventListener('load', function(){
                 listData2.appendChild(text2);
                 listItem.appendChild(listData2);
             }
-            container.appendChild(listItem);
-            
+            function translateHourToNumber(value){
+                var parts = value.split(':');
+                var hours = parseInt(parts[0])
+                var minutes = parseInt(parts[1])
+                return hours*60+minutes
+              }
+            const daysOfWeek = ['PN', 'WT', 'SR', 'CZ', 'PT', 'SB', 'ND'];
+            listItem.setAttribute('dow-index', daysOfWeek.indexOf(dow.value));
+            listItem.setAttribute('hour-value', translateHourToNumber(hour.value));
+            let found = false;
+            for(const old of container.querySelectorAll('div.list-item')){
+                const diff = parseInt(listItem.getAttribute('dow-index')) - parseInt(old.getAttribute('dow-index'))
+                if(diff === 0){
+                    const diff2 = parseInt(listItem.getAttribute('hour-value')) - parseInt(old.getAttribute('hour-value'));
+                    if(diff2 < 0){
+                        container.insertBefore(listItem, old);
+                        found = true;
+                        break;
+                    }
+                }else if(diff < 0){
+                    container.insertBefore(listItem, old);
+                    found = true;
+                    break;
+                }
+            }
+            if(!found)
+                container.appendChild(listItem);
+
             nextIndex++;
             document.getElementById('training_day_creator').classList.add('hidden');
             dow.value = "";

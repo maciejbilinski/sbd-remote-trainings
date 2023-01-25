@@ -402,7 +402,13 @@ const bootstrap = async () => {
                     element.DZIEN_TYG_PRZYPOMNIENIA !== null && element.GODZ_PRZYPOMNIENIA !== null,
                     element.DZIEN_TYG_PRZYPOMNIENIA == null ? undefined : element.DZIEN_TYG_PRZYPOMNIENIA,
                     element.GODZ_PRZYPOMNIENIA === null ? undefined : translateNumberToHour(element.GODZ_PRZYPOMNIENIA ),
-                  ]),
+                    element.GODZINA
+                  ]).sort((a, b) => {
+                    const diff = daysOfWeek.indexOf(a[0] as string) - daysOfWeek.indexOf(b[0] as string);
+                    if(diff === 0){
+                      return (a[5] as number)-(b[5] as number);
+                    }else return diff;
+                  }),
                   end: data.DATA_ZAKONCZENIA === null ? undefined : formatDate(data.DATA_ZAKONCZENIA), notification: (req as any).notification
                 })
               }else res.sendStatus(500)
