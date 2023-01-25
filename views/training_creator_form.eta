@@ -27,11 +27,12 @@
 
 <div class="form-group">
     <label class="with-icon"><span class='material-symbols-outlined add-circle' subform-id="ex_creator">add_circle</span> Ćwiczenia:</label>
+    <input type="text" class="searchbox form-control" id="training-exercises-search" placeholder="Wyszukiwarka">
     <div class="container panel-container">
     <div class="row" id="training-exercises">
     <% if(it.exercises) {%>
     <% it.exercises.forEach((e) => { %>
-    <div class="col-2 panel">
+    <div class="col-2 panel" training-exercise ex-name="<%=e%>">
         <input class="form-check-input d-none" type="checkbox" name="ex-<%=encodeURI(e)%>" id="<%=encodeURI(e)%>">
         <label class="form-check-label" for="<%=encodeURI(e)%>">
             <div class="selected"></div>

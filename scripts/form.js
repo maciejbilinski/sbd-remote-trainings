@@ -63,6 +63,8 @@ window.addEventListener('load', function(){
             if(row){
                 const child = document.createElement('div');
                 child.classList.add('col-2', 'panel');
+                child.setAttribute('exercise-equipment', '');
+                child.setAttribute('eq-name', e.name);
                 child.innerHTML = `
                 <input class="form-check-input d-none" type="checkbox" name="equipment-${encodeURI(e.name)}" id="${encodeURI(e.name)}">
                 <label class="form-check-label" for="${encodeURI(e.name)}">
@@ -71,7 +73,19 @@ window.addEventListener('load', function(){
                     <p class="equip-name">${e.name}</p>
                 </label>
                 `;
-                row.appendChild(child);
+
+                let found = false;
+                const eqname = e.name.toUpperCase();
+                for(const old of row.querySelectorAll('div.panel')){
+                    if(old.getAttribute('eq-name').toUpperCase() > eqname){
+                        row.insertBefore(child, old);
+                        found = true;
+                        break;
+                    }
+                }
+                if(!found)
+                    row.appendChild(child);
+
                 document.getElementById('equip_creator').classList.add('hidden');
             }
             equipC.querySelector('[name="name"]').value = "";
@@ -88,6 +102,8 @@ window.addEventListener('load', function(){
             if(row){
                 const child = document.createElement('div');
                 child.classList.add('col-2', 'panel');
+                child.setAttribute('training-exercise', '');
+                child.setAttribute('ex-name', e.name);
                 child.innerHTML = `
                 <input class="form-check-input d-none" type="checkbox" name="ex-${encodeURI(e.name)}" id="${encodeURI(e.name)}">
                 <label class="form-check-label" for="${encodeURI(e.name)}">
@@ -95,7 +111,17 @@ window.addEventListener('load', function(){
                     <p class="ex-name">${e.name}</p>
                 </label>
                 `;
-                row.appendChild(child);
+                let found = false;
+                const exname = e.name.toUpperCase();
+                for(const old of row.querySelectorAll('div.panel')){
+                    if(old.getAttribute('ex-name').toUpperCase() > exname){
+                        row.insertBefore(child, old);
+                        found = true;
+                        break;
+                    }
+                }
+                if(!found)
+                    row.appendChild(child);
                 document.getElementById('ex_creator').classList.add('hidden');
             }
             exC.querySelector('[name="name"]').value = "";
@@ -141,4 +167,30 @@ window.addEventListener('load', function(){
             parent.innerHTML = `<img src="/files/equipment/${addPhoto.querySelector('input[name=\'name\']').value}.png">`
         }
     }
+
+    document.getElementById('training-exercises-search').addEventListener('input', function (e) {
+        let searchQuery = e.target.value.toUpperCase();
+
+        document.querySelectorAll('div[training-exercise]').forEach(function(e) {
+            const targetName = e.getAttribute('ex-name').toUpperCase();
+            if (targetName.includes(searchQuery)) {
+                e.style.display = 'block';
+            } else {
+                e.style.display = 'none';
+            }
+        });
+    });
+
+    document.getElementById('exercise-equipment-search').addEventListener('input', function (e) {
+        let searchQuery = e.target.value.toUpperCase();
+
+        document.querySelectorAll('div[exercise-equipment]').forEach(function(e) {
+            const targetName = e.getAttribute('eq-name').toUpperCase();
+            if (targetName.includes(searchQuery)) {
+                e.style.display = 'block';
+            } else {
+                e.style.display = 'none';
+            }
+        });
+    });
 });

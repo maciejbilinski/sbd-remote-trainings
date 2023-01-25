@@ -163,7 +163,7 @@ const bootstrap = async () => {
   // Checks if user is logged in; if not, redirects to main page
   const checkLoggedIn = async (req: Request, res: Response, next: Function) => {
     if(process.env.STILL_LOGGED_IN == "true"){
-      req.session.username = "admin"
+      req.session.username = "MIKOLAJ"
       req.session.save();
     }
     if(!req.session.username) {
@@ -274,7 +274,7 @@ const bootstrap = async () => {
       result = (await connection.execute(`SELECT nazwa FROM cwiczenia`, [], { outFormat: OUT_FORMAT_ARRAY } )).rows;
       if(result){
           
-          let result2 = (await connection.execute(`SELECT nazwa, ma_zdjecie FROM sprzet`, [], { outFormat: OUT_FORMAT_ARRAY } )).rows;
+          let result2 = (await connection.execute(`SELECT nazwa, ma_zdjecie FROM sprzet ORDER BY UPPER(nazwa)`, [], { outFormat: OUT_FORMAT_ARRAY } )).rows;
           if(result2){
             res.render("training_creator", {
               exercises: result.flat(),
@@ -299,7 +299,7 @@ const bootstrap = async () => {
     try{
       pool = await getPool();
       connection = await pool.getConnection();
-      result = (await connection.execute(`SELECT nazwa, ma_zdjecie FROM sprzet`, [], { outFormat: OUT_FORMAT_ARRAY } )).rows;
+      result = (await connection.execute(`SELECT nazwa, ma_zdjecie FROM sprzet ORDER BY UPPER(nazwa)`, [], { outFormat: OUT_FORMAT_ARRAY } )).rows;
       if(result){
           res.render("exercises_creator", {
             equipment: result, notification: (req as any).notification
