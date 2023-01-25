@@ -42,12 +42,37 @@ window.addEventListener('load', function () {
             }]
         },
         options: {
+            plugins: {
+                legend: {
+                    display: false
+                },
+                title: {
+                    display: true,
+                    text: 'Wykonane treningi',
+                    color: '#dddddd'
+                }
+            },
             scales: {
                 y: {
                     min: 0,
+                    suggestedMax: 3,
                     ticks: {
                         beginAtZero: true,
+                        color: '#dddddd',
                         callback: function (value) { if (value % 1 === 0) { return value; } }
+                    },
+                    grid: {
+                        color: '#555555',
+                        display: true
+                    }
+                },
+                x: {
+                    ticks: {
+                        color: '#dddddd'
+                    },
+                    grid: {
+                        color: '#555555',
+                        display: true
                     }
                 }
             }

@@ -850,7 +850,10 @@ const bootstrap = async () => {
         connection = await pool.getConnection();
         await connection.execute(`DELETE FROM ocenycwiczen WHERE uzytkownicy_login=:login`, [username], { autoCommit: false });
         await connection.execute(`DELETE FROM ocenytreningow WHERE uzytkownicy_login=:login`, [username], { autoCommit: false });
+        await connection.execute(`DELETE FROM wykonanecwiczenia WHERE wykonanetreningi_id IN (SELECT id FROM wykonanetreningi WHERE plantreningowy_id IN (SELECT id FROM plantreningowy WHERE uzytkownicy_login=:login AND treningi_nazwa IN (SELECT nazwa FROM treningi WHERE uzytkownicy_login=:login AND czy_prywatny = 'T')))`, [username], { autoCommit: false });
+        await connection.execute(`DELETE FROM wykonanetreningi WHERE plantreningowy_id IN (SELECT id FROM plantreningowy WHERE uzytkownicy_login=:login AND treningi_nazwa IN (SELECT nazwa FROM treningi WHERE uzytkownicy_login=:login AND czy_prywatny = 'T'))`, [username], { autoCommit: false });
         await connection.execute(`DELETE FROM plantreningowy WHERE uzytkownicy_login=:login`, [username], { autoCommit: false });
+        await connection.execute(`DELETE FROM cwiczeniatreningi WHERE treningi_nazwa IN (SELECT nazwa FROM treningi WHERE uzytkownicy_login=:login AND czy_prywatny = 'T')`, [username], { autoCommit: false });
         await connection.execute(`DELETE FROM treningi WHERE uzytkownicy_login=:login AND czy_prywatny = 'T'`, [username], { autoCommit: false });
         // bind all public trainings to a special public account '*publiczny*'
         result = (await connection.execute(`SELECT COUNT(*) AS n FROM uzytkownicy WHERE login='*publiczny*'`, {}, { outFormat: OUT_FORMAT_OBJECT })).rows;
