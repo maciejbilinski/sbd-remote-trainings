@@ -9,6 +9,7 @@ import fileUpload, { UploadedFile } from 'express-fileupload';
 import path, { resolve } from 'path';
 import { traceDeprecation } from 'process';
 import { rejects } from 'assert';
+import { request } from 'http';
 
 const superhardquery = `
 SELECT 
@@ -223,13 +224,20 @@ const bootstrap = async () => {
   // routes
   app.get('/', checkLoggedIn, async (req: Request, res: Response) => {
     const username = req.session.username;
-    let pool, connection, result;
+    let pool, connection, result, result2, result3;
     try {
       pool = await getPool();
       connection = await pool.getConnection();
       result = (await connection.execute(`SELECT TO_CHAR(wt.data_zakonczenia, 'DAY') as DZIEN, COUNT(*) as N FROM wykonanetreningi wt JOIN plantreningowy pt ON wt.plantreningowy_id = pt.id WHERE wt.data_zakonczenia BETWEEN TRUNC(SYSDATE, 'IW') AND SYSDATE AND pt.uzytkownicy_login=:login GROUP BY TO_CHAR(wt.data_zakonczenia, 'DAY')`, [username], { outFormat: OUT_FORMAT_OBJECT })).rows;
       if (result) {
-        res.render("cockpit", { username: username, results: result, notification: (req as any).notification });
+        result2 = (await connection.execute(`SELECT preferowana_jednostka FROM uzytkownicy WHERE login=:login`, [req.session.username], { outFormat: OUT_FORMAT_OBJECT })).rows;
+        if (result2) {
+          if (result2[0]) {
+            result3 = (await connection.execute(`SELECT SumaObciazen(:1, :2) FROM DUAL`, [username, (result2[0] as { PREFEROWANA_JEDNOSTKA: string }).PREFEROWANA_JEDNOSTKA], { outFormat: OUT_FORMAT_ARRAY })).rows;
+  
+            res.render("cockpit", { sumWeight: Math.floor(((result3 as number[][])[0] as number[])[0]), sumUnit: (result2[0] as { PREFEROWANA_JEDNOSTKA: string }).PREFEROWANA_JEDNOSTKA, username: username, results: result, notification: (req as any).notification });
+          }
+        }
       } else res.sendStatus(500);
     } catch (err) {
       console.error(err);
@@ -1771,6 +1779,38 @@ const bootstrap = async () => {
     })
    }
   });
+
+
+  app.post('/sum-weight', checkLoggedIn, async (req: Request, res: Response) => {
+    if (req.body.sumWeightUnit) {
+      if(['K', 'L'].includes(req.body.sumWeightUnit)) {
+        const username = req.session.username;
+        var new_unit;
+        if(req.body.sumWeightUnit === 'K') new_unit = 'L';
+        else new_unit = 'K';
+        let pool, connection, result;
+        try {
+          pool = await getPool();
+          connection = await pool.getConnection();
+          result = (await connection.execute(`SELECT SumaObciazen(:1, :2) FROM DUAL`, [username, new_unit], { outFormat: OUT_FORMAT_ARRAY })).rows;
+          res.json({
+            weight: Math.floor(((result as number[][])[0] as number[])[0]),
+            unit: new_unit
+          })
+        } catch (err) {
+          console.error(err);
+          res.sendStatus(500);
+        } finally {
+          await connection?.close();
+          await pool?.close();
+        }
+      }else res.json({
+        error: 'Niepoprawna wartość jednostki'
+      })
+    }else res.json({
+      error: 'Brakujący argument'
+    })
+  })
 
   // listen
   const port = process.env.PORT;

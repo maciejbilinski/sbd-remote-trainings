@@ -1,9 +1,16 @@
-<% layout('./layout', {styles: ['welcome', 'cockpit'], scripts: ['generate_chart'], charts: true}) %>
+<% layout('./layout', {styles: ['welcome', 'cockpit'], scripts: ['generate_chart', 'form'], charts: true}) %>
 <script type="text/javascript">
 const results = JSON.parse('<%~ JSON.stringify(it.results) %>');
 </script>
 <section class="content" data-bs-theme="dark">
     <h1>Witaj <span class='regular'><%~ it.username %></span>!</h1>
+    <div style="text-align: center;">
+        Podniosłeś już <span id="sumWeight"><%= it.sumWeight %></span> <span id="sumWeightUnit"><%if(it.sumUnit === 'K'){%>kg<%}else{%>lbs<%}%></span>
+        <form action="/sum-weight" id="subWeightForm">
+            <input type="hidden" id="sumWeightUnitInput" name="sumWeightUnit" value="<%=it.sumUnit%>">
+            <input form-submit type="submit" class="btn btn-primary" value="Zmień jednostkę">
+        </form>
+    </div>
     <div class="options">
         <a href="user-trainings">
             <div class="flex-option">
