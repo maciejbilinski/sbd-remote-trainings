@@ -20,6 +20,23 @@
     </div>
     <h1><% =it.trainingName %></h1>
     <h2>Autor treningu: <% =it.trainingAuthor %></h2>
+    <hr>
+    <% if (it.cwiczenia.length > 0) { %>
+    <p>Ćwiczenia:</p>
+    <ol>
+    <% it.cwiczenia.forEach((col) => { %>
+        <li><%=col[0]%></li>
+    <% }); %>
+    </ol>
+    <% } %>
+    <% if (it.sprzet.length > 0) { %>
+    <p>Sprzęt:</p>
+    <ul>
+    <% it.sprzet.forEach((col) => { %>
+        <li><%=col[0]%></li>
+    <% }); %>
+    </ul>
+    <% } %>
     <div class="d-flex">
         <div>
             <h2>Oceń trening</h2>
