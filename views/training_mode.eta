@@ -1,4 +1,12 @@
-<% layout('./layout', {styles: ['training'], scripts: ['form', 'rating', 'training_mode']}) %>
+<% layout('./layout', {styles: ['training'], scripts: ['form', 'rating', 'training_mode', 'date_input']}) %>
+<%
+    function getGoodNow(){
+        var yourDate = new Date();
+        const offset = yourDate.getTimezoneOffset()
+        yourDate = new Date(yourDate.getTime() - (offset*60*1000))
+        return yourDate.toISOString().substring(0, 16);
+    }
+%>
 <script type="text/javascript">
 const exercisesData = JSON.parse('<%~ JSON.stringify(it.exercises) %>');
 const inKG = <% if(it.unit === 'K'){ %>true<%}else{%>false<%}%>;
@@ -9,7 +17,6 @@ const inKG = <% if(it.unit === 'K'){ %>true<%}else{%>false<%}%>;
     </h1>
     <div class="full">
         <form method="POST" ajax-form id="training-mode-form">
-            <input type="hidden" name="startDate" value="<%= (new Date()).getTime()%>">
             <% if(it.exercises) {%>
             <div class="exercises">
             <h2>Ćwiczenia:</h2>
@@ -71,6 +78,13 @@ const inKG = <% if(it.unit === 'K'){ %>true<%}else{%>false<%}%>;
                 <span class="material-symbols-outlined star" n="3">star</span>
                 <span class="material-symbols-outlined star" n="4">star</span>
                 <span class="material-symbols-outlined star" n="5">star</span>
+            </div>
+            <div class="form-group" style="margin: 10px 0;">
+                <h2>Daty:</h2>
+                <label for="startDate"><sup class="red">*</sup>Data rozpoczęcia:</label>
+                <input class="form-control" type="datetime-local" id="startDateInput" name="startDate" value="<%= getGoodNow() %>" style="width: auto;" required>
+                <label for="endDate"><sup class="red">*</sup>Data zakończenia:</label>
+                <input class="form-control datetime-input" type="text" id="endDateInput" placeholder="Automatyczna" name="endDate" style="width: 176px;">
             </div>
             <div class="text-left">
                 <p class="error" form-error></p>

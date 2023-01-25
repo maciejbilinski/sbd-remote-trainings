@@ -1536,207 +1536,235 @@ const bootstrap = async () => {
 
   app.post('/training-mode/:id', checkLoggedIn, async (req: Request, res: Response) => {
    if(req.body.rating && req.body.startDate){
-      const rating = parseInt(req.body.rating);
-      const startDate = parseInt(req.body.startDate);
-      if(isNaN(rating) || isNaN(startDate) || rating < 1 || rating > 5){
-        return res.json({
-          error: 'Niepoprawna wartość głosowania lub daty rozpoczęcia'
-        })
-      }
-     var exercises: any = {};
-     for(const key of Object.keys(req.body)){
-      if(key.startsWith('exercises')){
-        let parts = key.split('+');
-        if(parts.length > 1){
-          const exName = decodeURI(parts[1]);
-          if(!Object.keys(exercises).includes(exName)){
-            exercises[exName] = {};
+      const reg = /[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}/;
+      if(reg.test(req.body.startDate)){
+          const now = new Date();
+          const rating = parseInt(req.body.rating);
+          var startDate = new Date(req.body.startDate);
+          var endDate = now;
+          if(req.body.endDate && req.body.endDate.length > 0 && reg.test(req.body.endDate)){
+            endDate = new Date(req.body.endDate);
           }
-          if(parts.length > 2){
-            var seriesN: number|string;
-            var ok = true;
-            try{
-              seriesN = parseInt(parts[2]);
-              if(isNaN(seriesN)) ok = false;
-            }catch(err: any){
-              ok = false;
-            }
-            if(ok){
-              seriesN = seriesN!.toString();
-              if(!Object.keys(exercises[exName]).includes(seriesN)){
-                exercises[exName][seriesN] = {};
+          if(endDate.getTime() >= startDate.getTime()){
+              if(isNaN(rating) || rating < 1 || rating > 5){
+                return res.json({
+                  error: 'Niepoprawna wartość głosowania lub daty rozpoczęcia'
+                })
               }
-  
-              if(parts.length > 3){
-                if(['amount', 'time', 'weight'].includes(parts[3])){
-                  if(parts[3] === 'weight'){
-                    if(!Object.keys(exercises[exName][seriesN]).includes('weight')){
-                      exercises[exName][seriesN]['weight'] = {};
-                    }
-                    
-                    if(parts.length === 5){
-                      var eq = decodeURI(parts[4]);
-                      if(!Object.keys(exercises[exName][seriesN]['weight']).includes(eq)){
-                        var value: number;
-                        var ok: boolean = true;
-                        try{
-                          value = parseInt(req.body[key]);
-                          if(isNaN(value)) ok = false;
-                        }catch(err: any){
-                          ok = false;
-                        }
-                        if(ok){
-                          exercises[exName][seriesN]['weight'][eq] = value!;
-                          continue;
-                        }
-                      }
-                    }
-                  }else if(parts.length === 4){
-                    if(!Object.keys(exercises[exName][seriesN]).includes('amount') && !Object.keys(exercises[exName][seriesN]).includes('time')){
-                      var value: number;
-                      var ok: boolean = true;
-                      try{
-                        value = parseInt(req.body[key]);
-                        if(isNaN(value)) ok = false;
-                      }catch(err: any){
-                        ok = false;
-                      }
-                      if(ok){
-                        exercises[exName][seriesN][parts[3]] = value!;
-                        continue;
-                      }
-                    }
+            var exercises: any = {};
+            for(const key of Object.keys(req.body)){
+              if(key.startsWith('exercises')){
+                let parts = key.split('+');
+                if(parts.length > 1){
+                  const exName = decodeURI(parts[1]);
+                  if(!Object.keys(exercises).includes(exName)){
+                    exercises[exName] = {};
                   }
-                }
-              }
-            }
-          }
-        }
-        return res.json({
-          error: "Niepoprawny parametr exercises"
-        });
-        break;
-      }
-     }
-  
-     for(const key in exercises){
-      var series = Object.keys(exercises[key]).map((e) => parseInt(e));
-      series.sort();
-      var prev = 0;
-      for(let i=0; i<series.length; i++){
-        if((series[i]-prev) !== 1){
-          return res.json({
-            error: "Niepoprawny parametr exercises"
-          });
-          break;
-        }
-        prev = series[i];
-      }
-     }
-
-    let pool, connection, result, result2;
-    try{
-      pool = await getPool();
-      connection = await pool.getConnection();
-      result = (await connection.execute(superhardquery, [req.params.id], { outFormat: OUT_FORMAT_ARRAY } )).rows;
-      if(result){
-          if(result[0]){
-            result = (result as string[][])[0]
-            if(result[0]){
-              result = JSON.parse(result[0]);
-              if(result.login !== req.session.username){
-                res.json({'error': 'Ten plan treningowy nie należy do ciebie!'})
-              }else{
-                var end;
-                var ok = false;
-                if(result.data_zakonczenia === null){
-                  ok = true;
-                }else{
-                  end = new Date(result.data_zakonczenia);
-                  if(end >= new Date()){
-                    ok = true;
-                  }
-                }
-                
-                if(ok){
-                  result2 = await connection.execute('INSERT INTO wykonanetreningi (data_rozpoczecia, data_zakonczenia, ocena_zmeczenia, plantreningowy_id) VALUES (:1, :2, :3, :4) RETURNING id INTO :id', [
-                    new Date(startDate), new Date(), rating, req.params.id, { type: NUMBER, dir: BIND_OUT }
-                  ], {autoCommit: false});
-                  var id = (result2.outBinds as number[][])[0][0];
-                  loop1:
-                  for(const exNameKey in exercises){
-                    loop2:
-                    for(const seriesKey in exercises[exNameKey]){
-                      var error = true;
-                      loop3:
-                      for(const realExercise of result.cwiczenia){
-                        if(realExercise.nazwa === exNameKey){
-                          if(
-                            (Object.keys(exercises[exNameKey][seriesKey]).includes('amount') && realExercise.czy_powtorzeniowe === 'T') ||
-                            (Object.keys(exercises[exNameKey][seriesKey]).includes('time') && realExercise.czy_powtorzeniowe === 'N')
-                          ){
-                            result2 = await connection.execute('INSERT INTO wykonanecwiczenia (seria, wysilek, cwiczenia_nazwa, wykonanetreningi_id) VALUES (:1, :2, :3, :4) RETURNING id INTO :id', [
-                              parseInt(seriesKey), parseInt(exercises[exNameKey][seriesKey]['amount'] ? exercises[exNameKey][seriesKey]['amount'] : exercises[exNameKey][seriesKey]['time']), exNameKey, id, { type: NUMBER, dir: BIND_OUT }
-                            ], {autoCommit: false});
-                            error = false;
-                            var wcId = (result2.outBinds as number[][])[0][0];;
-                            if(Object.keys(exercises[exNameKey][seriesKey]).includes('weight')){
-                              loop4:
-                              for(const eqName in exercises[exNameKey][seriesKey]['weight']){
-                                var error2 = true;
-                                if(realExercise.sprzet){
-                                  loop5:
-                                  for(const realEq of realExercise.sprzet){
-                                    if(realEq.nazwa === eqName){
-                                      if(realEq.czy_rozne_obciazenie === 'T'){
-                                        await connection.execute('INSERT INTO obciazenia (obciazenie, wykonanecwiczenia_id, sprzet_nazwa) VALUES (:1, :2, :3)', [
-                                          parseInt(exercises[exNameKey][seriesKey]['weight'][eqName]), wcId, eqName
-                                        ], {autoCommit: false})
-                                        error2 = false;
-                                      }
-                                      break loop5;
-                                    }
-                                  }
+                  if(parts.length > 2){
+                    var seriesN: number|string;
+                    var ok = true;
+                    try{
+                      seriesN = parseInt(parts[2]);
+                      if(isNaN(seriesN)) ok = false;
+                    }catch(err: any){
+                      ok = false;
+                    }
+                    if(ok){
+                      seriesN = seriesN!.toString();
+                      if(!Object.keys(exercises[exName]).includes(seriesN)){
+                        exercises[exName][seriesN] = {};
+                      }
+          
+                      if(parts.length > 3){
+                        if(['amount', 'time', 'weight'].includes(parts[3])){
+                          if(parts[3] === 'weight'){
+                            if(!Object.keys(exercises[exName][seriesN]).includes('weight')){
+                              exercises[exName][seriesN]['weight'] = {};
+                            }
+                            
+                            if(parts.length === 5){
+                              var eq = decodeURI(parts[4]);
+                              if(!Object.keys(exercises[exName][seriesN]['weight']).includes(eq)){
+                                var value: number;
+                                var ok: boolean = true;
+                                try{
+                                  value = parseInt(req.body[key]);
+                                  if(isNaN(value)) ok = false;
+                                }catch(err: any){
+                                  ok = false;
                                 }
-                                if(error2){
-                                  res.json({
-                                    error: 'Próbowano dodać błędne obciążenie sprzętu!'
-                                  })
-                                  break loop1;
+                                if(ok){
+                                  exercises[exName][seriesN]['weight'][eq] = value!;
+                                  continue;
                                 }
                               }
                             }
-                            break loop3;
+                          }else if(parts.length === 4){
+                            if(!Object.keys(exercises[exName][seriesN]).includes('amount') && !Object.keys(exercises[exName][seriesN]).includes('time')){
+                              var value: number;
+                              var ok: boolean = true;
+                              try{
+                                value = parseInt(req.body[key]);
+                                if(isNaN(value)) ok = false;
+                              }catch(err: any){
+                                ok = false;
+                              }
+                              if(ok){
+                                exercises[exName][seriesN][parts[3]] = value!;
+                                continue;
+                              }
+                            }
                           }
                         }
                       }
-                      if(error){
-                        res.json({
-                          error: 'Próbowano wykonać błędne ćwiczenie!'
-                        })
-                        break loop1;
-                      }
-                      
                     }
                   }
-                  await connection.commit();
-                  res.json({success: true})
-                }else{
-                  res.json({'error': 'Ten plan treningowy jest już zakończony'})
                 }
+                return res.json({
+                  error: "Niepoprawny parametr exercises"
+                });
+                break;
               }
-            }else res.sendStatus(500)
-          }else res.sendStatus(500)
-        }else res.sendStatus(500)
-    }catch(err){
-      console.error(err);
-      res.sendStatus(500);  
-      res.send('Błąd wewnętrzny')       
+            }
+          
+            for(const key in exercises){
+              var series = Object.keys(exercises[key]).map((e) => parseInt(e));
+              series.sort();
+              var prev = 0;
+              for(let i=0; i<series.length; i++){
+                if((series[i]-prev) !== 1){
+                  return res.json({
+                    error: "Niepoprawny parametr exercises"
+                  });
+                  break;
+                }
+                prev = series[i];
+              }
+            }
         
-    }finally{
-      await connection?.close();
-      await pool?.close();
-    }
+            let pool, connection, result, result2, result3;
+            try{
+              pool = await getPool();
+              connection = await pool.getConnection();
+              result = (await connection.execute(superhardquery, [req.params.id], { outFormat: OUT_FORMAT_ARRAY } )).rows;
+              if(result){
+                  if(result[0]){
+                    result = (result as string[][])[0]
+                    if(result[0]){
+                      result = JSON.parse(result[0]);
+                      if(result.login !== req.session.username){
+                        res.json({'error': 'Ten plan treningowy nie należy do ciebie!'})
+                      }else{
+                        var end;
+                        var ok = false;
+                        if(result.data_zakonczenia === null){
+                          ok = true;
+                        }else{
+                          end = new Date(result.data_zakonczenia);
+                          if(end >= new Date()){
+                            ok = true;
+                          }
+                        }
+                        
+                        if(ok){
+                          result3 = (await connection.execute(`SELECT COUNT(*) AS n FROM wykonanetreningi WHERE data_rozpoczecia=:1 AND plantreningowy_id=:2`, [
+                            startDate, req.params.id], { outFormat: OUT_FORMAT_OBJECT })).rows;
+                          if (result3) {
+                            if (result3[0]) {
+                              if ((result3[0] as { N: number }).N === 1) {
+                                res.json({'error': 'W tym terminie wykonałeś już ten plan treningowy. Zmień datę rozpoczęcia, aby kontynuować.'})
+                              }else{
+                                result2 = await connection.execute('INSERT INTO wykonanetreningi (data_rozpoczecia, data_zakonczenia, ocena_zmeczenia, plantreningowy_id) VALUES (:1, :2, :3, :4) RETURNING id INTO :id', [
+                                  startDate, endDate, rating, req.params.id, { type: NUMBER, dir: BIND_OUT }
+                                ], {autoCommit: false});
+                                var id = (result2.outBinds as number[][])[0][0];
+                                loop1:
+                                for(const exNameKey in exercises){
+                                  loop2:
+                                  for(const seriesKey in exercises[exNameKey]){
+                                    var error = true;
+                                    loop3:
+                                    for(const realExercise of result.cwiczenia){
+                                      if(realExercise.nazwa === exNameKey){
+                                        if(
+                                          (Object.keys(exercises[exNameKey][seriesKey]).includes('amount') && realExercise.czy_powtorzeniowe === 'T') ||
+                                          (Object.keys(exercises[exNameKey][seriesKey]).includes('time') && realExercise.czy_powtorzeniowe === 'N')
+                                        ){
+                                          result2 = await connection.execute('INSERT INTO wykonanecwiczenia (seria, wysilek, cwiczenia_nazwa, wykonanetreningi_id) VALUES (:1, :2, :3, :4) RETURNING id INTO :id', [
+                                            parseInt(seriesKey), parseInt(exercises[exNameKey][seriesKey]['amount'] ? exercises[exNameKey][seriesKey]['amount'] : exercises[exNameKey][seriesKey]['time']), exNameKey, id, { type: NUMBER, dir: BIND_OUT }
+                                          ], {autoCommit: false});
+                                          error = false;
+                                          var wcId = (result2.outBinds as number[][])[0][0];;
+                                          if(Object.keys(exercises[exNameKey][seriesKey]).includes('weight')){
+                                            loop4:
+                                            for(const eqName in exercises[exNameKey][seriesKey]['weight']){
+                                              var error2 = true;
+                                              if(realExercise.sprzet){
+                                                loop5:
+                                                for(const realEq of realExercise.sprzet){
+                                                  if(realEq.nazwa === eqName){
+                                                    if(realEq.czy_rozne_obciazenie === 'T'){
+                                                      await connection.execute('INSERT INTO obciazenia (obciazenie, wykonanecwiczenia_id, sprzet_nazwa) VALUES (:1, :2, :3)', [
+                                                        parseInt(exercises[exNameKey][seriesKey]['weight'][eqName]), wcId, eqName
+                                                      ], {autoCommit: false})
+                                                      error2 = false;
+                                                    }
+                                                    break loop5;
+                                                  }
+                                                }
+                                              }
+                                              if(error2){
+                                                res.json({
+                                                  error: 'Próbowano dodać błędne obciążenie sprzętu!'
+                                                })
+                                                break loop1;
+                                              }
+                                            }
+                                          }
+                                          break loop3;
+                                        }
+                                      }
+                                    }
+                                    if(error){
+                                      res.json({
+                                        error: 'Próbowano wykonać błędne ćwiczenie!'
+                                      })
+                                      break loop1;
+                                    }
+                                    
+                                  }
+                                }
+                                await connection.commit();
+                                res.json({success: true})
+                              }
+                            }else res.sendStatus(500)
+                          }else res.sendStatus(500)
+                        }else{
+                          res.json({'error': 'Ten plan treningowy jest już zakończony'})
+                        }
+                      }
+                    }else res.sendStatus(500)
+                  }else res.sendStatus(500)
+                }else res.sendStatus(500)
+            }catch(err){
+              console.error(err);
+              res.sendStatus(500);  
+              res.send('Błąd wewnętrzny')       
+                
+            }finally{
+              await connection?.close();
+              await pool?.close();
+            }
+          }else{
+            return res.json({
+              error: "Data rozpoczęcia nie może być późniejszą datą niż data zakończenia"
+            })
+          }         
+      }else{
+        return res.json({
+          error: "Niepoprawny format daty rozpoczęcia"
+        })
+      }
    }else{
     return res.json({
       error: "Brak parametru głosowania lub daty rozpoczęcia"
