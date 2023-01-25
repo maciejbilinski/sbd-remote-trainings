@@ -20,11 +20,28 @@
     </div>
     <h1><% =it.trainingName %></h1>
     <h2>Autor treningu: <% =it.trainingAuthor %></h2>
+    <hr>
+    <% if (it.cwiczenia.length > 0) { %>
+    <p>Ćwiczenia:</p>
+    <ol>
+    <% it.cwiczenia.forEach((col) => { %>
+        <li><%=col[0]%></li>
+    <% }); %>
+    </ol>
+    <% } %>
+    <% if (it.sprzet.length > 0) { %>
+    <p>Sprzęt:</p>
+    <ul>
+    <% it.sprzet.forEach((col) => { %>
+        <li><%=col[0]%></li>
+    <% }); %>
+    </ul>
+    <% } %>
     <div class="d-flex">
         <div>
             <h2>Oceń trening</h2>
             <div class="form-container">
-                <form action="/training-panel?name=<% =it.trainingName %>&author=<%=it.trainingAuthor %>" method="POST">
+                <form action="/training-panel?name=<% =it.trainingName %>&author=<%=it.trainingAuthor %><% if (it.fromUserTrainings) { %>&fromUserTrainings=true<%}%>" method="POST">
                     <input type="hidden" name="trainingName" value="<% =it.trainingName %>">
                     <input type="hidden" name="trainingAuthor" value="<% =it.trainingAuthor %>">
                     <label for="skutecznosc" class="form-check-label"><sup class="red">*</sup>Skuteczność</label>
