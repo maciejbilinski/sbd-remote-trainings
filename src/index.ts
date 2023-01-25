@@ -163,7 +163,7 @@ const bootstrap = async () => {
   // Checks if user is logged in; if not, redirects to main page
   const checkLoggedIn = async (req: Request, res: Response, next: Function) => {
     if(process.env.STILL_LOGGED_IN == "true"){
-      req.session.username = "MIKOLAJ"
+      req.session.username = "admin"
       req.session.save();
     }
     if(!req.session.username) {
