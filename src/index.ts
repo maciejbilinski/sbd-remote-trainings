@@ -434,7 +434,7 @@ const bootstrap = async () => {
     try {
       pool = await getPool();
       connection = await pool.getConnection();
-      result = (await connection.execute(`SELECT * FROM treningi WHERE czy_prywatny='N' OR uzytkownicy_login=:login`, [username], { outFormat: OUT_FORMAT_ARRAY })).rows;
+      result = (await connection.execute(`SELECT * FROM treningi WHERE czy_prywatny='N' OR uzytkownicy_login=:login ORDER BY czy_prywatny DESC, UPPER(nazwa), uzytkownicy_login`, [username], { outFormat: OUT_FORMAT_ARRAY })).rows;
       if (result) {
         res.render('training-search', { username: req.session.username, table: result, notification: (req as any).notification });
       }
@@ -494,7 +494,7 @@ const bootstrap = async () => {
     try {
       pool = await getPool();
       connection = await pool.getConnection();
-      result = (await connection.execute(`SELECT * FROM cwiczenia`, [], { outFormat: OUT_FORMAT_ARRAY })).rows;
+      result = (await connection.execute(`SELECT * FROM cwiczenia ORDER BY UPPER(nazwa), ma_instruktaz DESC`, [], { outFormat: OUT_FORMAT_ARRAY })).rows;
       if (result) {
         res.render('exercise-search', { table: result, notification: (req as any).notification });
       }
@@ -550,8 +550,8 @@ const bootstrap = async () => {
     try {
       pool = await getPool();
       connection = await pool.getConnection();
-      result = (await connection.execute(`SELECT nazwa FROM treningi WHERE czy_prywatny = 'N' AND uzytkownicy_login=:login`, [username], { outFormat: OUT_FORMAT_ARRAY })).rows;
-      result2 = (await connection.execute(`SELECT nazwa FROM treningi WHERE czy_prywatny = 'T' AND uzytkownicy_login=:login`, [username], { outFormat: OUT_FORMAT_ARRAY })).rows;
+      result = (await connection.execute(`SELECT nazwa FROM treningi WHERE czy_prywatny = 'N' AND uzytkownicy_login=:login ORDER BY UPPER(nazwa)`, [username], { outFormat: OUT_FORMAT_ARRAY })).rows;
+      result2 = (await connection.execute(`SELECT nazwa FROM treningi WHERE czy_prywatny = 'T' AND uzytkownicy_login=:login ORDER BY UPPER(nazwa)`, [username], { outFormat: OUT_FORMAT_ARRAY })).rows;
       if (result && result2) {
         res.render('user-trainings', { username: username, notification: (req as any).notification, tablePublic: result, tablePrivate: result2 });
       }
@@ -596,8 +596,8 @@ const bootstrap = async () => {
     try {
       pool = await getPool();
       connection = await pool.getConnection();
-      result = (await connection.execute(`SELECT id, treningi_nazwa, TO_CHAR(data_rozpoczecia, 'DD-MM-YYYY'), TO_CHAR(data_zakonczenia, 'DD-MM-YYYY') FROM plantreningowy WHERE uzytkownicy_login=:login AND (data_zakonczenia IS NULL OR SYSDATE < data_zakonczenia)`, [username], { outFormat: OUT_FORMAT_ARRAY })).rows;
-      result2 = (await connection.execute(`SELECT id, treningi_nazwa, TO_CHAR(data_rozpoczecia, 'DD-MM-YYYY'), TO_CHAR(data_zakonczenia, 'DD-MM-YYYY') FROM plantreningowy WHERE uzytkownicy_login=:login AND (data_zakonczenia IS NOT NULL AND SYSDATE > data_zakonczenia)`, [username], { outFormat: OUT_FORMAT_ARRAY })).rows;
+      result = (await connection.execute(`SELECT id, treningi_nazwa, TO_CHAR(data_rozpoczecia, 'DD-MM-YYYY'), TO_CHAR(data_zakonczenia, 'DD-MM-YYYY') FROM plantreningowy WHERE uzytkownicy_login=:login AND (data_zakonczenia IS NULL OR SYSDATE < data_zakonczenia) ORDER BY UPPER(treningi_nazwa)`, [username], { outFormat: OUT_FORMAT_ARRAY })).rows;
+      result2 = (await connection.execute(`SELECT id, treningi_nazwa, TO_CHAR(data_rozpoczecia, 'DD-MM-YYYY'), TO_CHAR(data_zakonczenia, 'DD-MM-YYYY') FROM plantreningowy WHERE uzytkownicy_login=:login AND (data_zakonczenia IS NOT NULL AND SYSDATE > data_zakonczenia) ORDER BY UPPER(treningi_nazwa)`, [username], { outFormat: OUT_FORMAT_ARRAY })).rows;
       if (result && result2) {
         res.render('user-training-plans', { username: username, currentPlans: result, finishedPlans: result2, notification: (req as any).notification });
       }
@@ -615,7 +615,7 @@ const bootstrap = async () => {
     try {
       pool = await getPool();
       connection = await pool.getConnection();
-      result = (await connection.execute(`SELECT * FROM sprzet`, [], { outFormat: OUT_FORMAT_ARRAY })).rows;
+      result = (await connection.execute(`SELECT * FROM sprzet ORDER BY UPPER(nazwa), ma_zdjecie DESC`, [], { outFormat: OUT_FORMAT_ARRAY })).rows;
       if (result) {
         res.render('equipment-search', { table: result, notification: (req as any).notification });
       }
