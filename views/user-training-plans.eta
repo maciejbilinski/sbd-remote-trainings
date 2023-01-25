@@ -9,6 +9,7 @@
     </div>
     <h1>Twoje plany treningowe</h1>
     <p>Tutaj możesz zobaczyć wszystkie Twoje plany treningowe, w tym obecnie trwające i zakończone.</p>
+    <p>Chcąc utworzyć nowy plan treningowy, skorzystaj z <a href="/training-search">Wyszukiwarki treningów</a>.</p>
     <details class="show-hide-widget" open>
         <summary class="show-hide-widget-name"><h2>Aktualne plany treningowe</h2></summary>
         <div class="form-container">

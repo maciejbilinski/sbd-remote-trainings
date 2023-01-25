@@ -8,8 +8,8 @@
         </a>
     </div>
     <h1>Wyszukiwarka treningów</h1>
-    <p>Tutaj możesz wyszukać wszystkie publiczne treningi innych użytkowników.</p>
-    <p>Dostępne są również wszystkie Twoje treningi. Prywatne treningi oznaczone są <i>pochyloną czcionką</i>.</p>
+    <p>Tutaj możesz wyszukać wszystkie publiczne treningi innych użytkowników oraz dodać je do Twojego <a href="user-training-plans">Planu treningowego</a>.</p>
+    <p>Dostępne są również wszystkie Twoje treningi. Prywatne treningi znajdują się na górze tabeli i oznaczone są <i>pochyloną czcionką</i>.</p>
     <p>Chcąc usunąć prywatny trening, przejdź do zakładki <a href="/user-trainings">Twoje treningi</a>.</p>
     <div class="d-flex">
         <input type="text" placeholder="Nazwa treningu" class="form-control" id="search-box">
