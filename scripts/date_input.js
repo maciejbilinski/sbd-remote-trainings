@@ -25,4 +25,23 @@ window.addEventListener('load', function(){
             }
         })
     });
+
+    const end = document.getElementById('endDateInput');
+    const start = document.getElementById('startDateInput');
+    end.addEventListener('focus', function(){
+        end.min = start.value;
+        end.type = 'datetime-local';
+    });
+    end.addEventListener('focusout', function(){
+        if(!end.value){
+            end.type = 'text';
+        }
+    })
+    start.addEventListener('focus', function(){
+        if(end.value){
+            start.max = end.value;
+        }else{
+            start.removeAttribute('max');
+        }
+    });
 });

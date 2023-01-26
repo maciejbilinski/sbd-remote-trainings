@@ -219,29 +219,35 @@ window.addEventListener('load', function(){
         }
     }
 
-    document.getElementById('training-exercises-search').addEventListener('input', function (e) {
-        let searchQuery = e.target.value.toUpperCase();
-
-        document.querySelectorAll('div[training-exercise]').forEach(function(e) {
-            const targetName = e.getAttribute('ex-name').toUpperCase();
-            if (targetName.includes(searchQuery)) {
-                e.style.display = 'block';
-            } else {
-                e.style.display = 'none';
-            }
+    const xyz = document.getElementById('training-exercises-search');
+    if(xyz){
+        xyz.addEventListener('input', function (e) {
+            let searchQuery = e.target.value.toUpperCase();
+    
+            document.querySelectorAll('div[training-exercise]').forEach(function(e) {
+                const targetName = e.getAttribute('ex-name').toUpperCase();
+                if (targetName.includes(searchQuery)) {
+                    e.style.display = 'block';
+                } else {
+                    e.style.display = 'none';
+                }
+            });
         });
-    });
+    }
 
-    document.getElementById('exercise-equipment-search').addEventListener('input', function (e) {
-        let searchQuery = e.target.value.toUpperCase();
-
-        document.querySelectorAll('div[exercise-equipment]').forEach(function(e) {
-            const targetName = e.getAttribute('eq-name').toUpperCase();
-            if (targetName.includes(searchQuery)) {
-                e.style.display = 'block';
-            } else {
-                e.style.display = 'none';
-            }
+    const abc = document.getElementById('exercise-equipment-search');
+    if(abc){
+        abc.addEventListener('input', function (e) {
+            let searchQuery = e.target.value.toUpperCase();
+    
+            document.querySelectorAll('div[exercise-equipment]').forEach(function(e) {
+                const targetName = e.getAttribute('eq-name').toUpperCase();
+                if (targetName.includes(searchQuery)) {
+                    e.style.display = 'block';
+                } else {
+                    e.style.display = 'none';
+                }
+            });
         });
-    });
+    }
 });
