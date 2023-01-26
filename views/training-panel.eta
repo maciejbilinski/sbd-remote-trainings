@@ -25,7 +25,7 @@
     <p>Ćwiczenia:</p>
     <ol>
     <% it.cwiczenia.forEach((col) => { %>
-        <li><%=col[0]%></li>
+        <li><a href="/exercise-panel?name=<%=col[0]%>" target="_blank"><%=col[0]%></a></li>
     <% }); %>
     </ol>
     <% } %>
@@ -33,7 +33,7 @@
     <p>Sprzęt:</p>
     <ul>
     <% it.sprzet.forEach((col) => { %>
-        <li><%=col[0]%></li>
+        <li><a href="/equipment-panel?name=<%=col[0]%>" target="_blank"><%=col[0]%></a></li>
     <% }); %>
     </ul>
     <% } %>
