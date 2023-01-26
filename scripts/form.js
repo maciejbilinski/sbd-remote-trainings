@@ -57,53 +57,55 @@ window.addEventListener('load', function(){
     });
 
     const swf = document.getElementById('subWeightForm');
-    swf.addEventListener('submit', function(e){
-        e.preventDefault();
-        const sumWeight = document.getElementById('sumWeight');
-        const sumWeightUnit = document.getElementById('sumWeightUnit');
-        const old1 = sumWeight.innerText;
-        const old2 = sumWeightUnit.innerText;
-        sumWeight.innerText = 'Czekaj...';
-        sumWeightUnit.innerText = '';
-        var data = new FormData(swf)
-        var options = {
-            method: 'POST'
-        }
-        var json = {};
-        for(const key of data.keys()){
-            json[key] = data.get(key);
-        }
-        options.body = JSON.stringify(json);
-        options['headers'] = {
-            'Content-Type': 'application/json'
-        }
-        
-        swf.getElementsByAttr('form-submit').forEach(function(submit){
-            submit.disabled = true;
-        });
-        fetch(swf.action, options).then(function(response){
-            return response.json();
-        }).then(function(json){
-            const keys = Object.keys(json);
-            if(keys.includes('error')){
-                throw json.error;
-            }else{
-                sumWeight.innerText = json.weight;
-                if(json.unit === 'K')
-                sumWeightUnit.innerText = 'kg';
-                else
-                sumWeightUnit.innerText = 'lbs';
-                document.getElementById('sumWeightUnitInput').value = json.unit;
+    if(swf){
+        swf.addEventListener('submit', function(e){
+            e.preventDefault();
+            const sumWeight = document.getElementById('sumWeight');
+            const sumWeightUnit = document.getElementById('sumWeightUnit');
+            const old1 = sumWeight.innerText;
+            const old2 = sumWeightUnit.innerText;
+            sumWeight.innerText = 'Czekaj...';
+            sumWeightUnit.innerText = '';
+            var data = new FormData(swf)
+            var options = {
+                method: 'POST'
             }
-        }).catch(function(err){
-            sumWeight.innerText = old1;
-            sumWeightUnit.innerText = old2;
-        }).finally(function(){
+            var json = {};
+            for(const key of data.keys()){
+                json[key] = data.get(key);
+            }
+            options.body = JSON.stringify(json);
+            options['headers'] = {
+                'Content-Type': 'application/json'
+            }
+            
             swf.getElementsByAttr('form-submit').forEach(function(submit){
-                submit.disabled = false;
+                submit.disabled = true;
             });
-        })
-    });
+            fetch(swf.action, options).then(function(response){
+                return response.json();
+            }).then(function(json){
+                const keys = Object.keys(json);
+                if(keys.includes('error')){
+                    throw json.error;
+                }else{
+                    sumWeight.innerText = json.weight;
+                    if(json.unit === 'K')
+                    sumWeightUnit.innerText = 'kg';
+                    else
+                    sumWeightUnit.innerText = 'lbs';
+                    document.getElementById('sumWeightUnitInput').value = json.unit;
+                }
+            }).catch(function(err){
+                sumWeight.innerText = old1;
+                sumWeightUnit.innerText = old2;
+            }).finally(function(){
+                swf.getElementsByAttr('form-submit').forEach(function(submit){
+                    submit.disabled = false;
+                });
+            })
+        });
+    }
 
     const equipC = document.querySelector('#equip_creator form:first-child');
     if(equipC){
